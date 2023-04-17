@@ -72,7 +72,7 @@ def cpp_flag(compiler):
 class BuildExt(build_ext):
     """A custom build extension for adding compiler-specific options."""
     c_opts = {
-        'unix': "-Ofast -lrt -march=icelake-server -fpic -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0".split()
+        'unix': "-Ofast -lrt -march=native -fpic -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0".split()
     }
 
     link_opts = {

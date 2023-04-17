@@ -3,25 +3,21 @@
 #include "glass/common.hpp"
 #include "glass/memory.hpp"
 #include "glass/neighbor.hpp"
-#include "glass/simd/distance.hpp"
 #include "glass/quant/fp32_quant.hpp"
+#include "glass/simd/distance.hpp"
 
 #include <cmath>
 #include <vector>
 
 namespace glass {
 
-template <Metric metric, typename Reorderer = FP32Quantizer<metric>,
-          int DIM = 0>
-struct SQ8Quantizer {
+template <Metric metric, int DIM = 0> struct SQ8Quantizer {
   using data_type = uint8_t;
-  constexpr static int kAlign = 64;
+  constexpr static int kAlign = 16;
   int d, d_align;
   int64_t code_size;
   char *codes = nullptr;
   std::vector<float> mx, mi, dif;
-
-  Reorderer reorderer;
 
   SQ8Quantizer() = default;
 
@@ -41,23 +37,20 @@ struct SQ8Quantizer {
     for (int64_t j = 0; j < d; ++j) {
       dif[j] = mx[j] - mi[j];
     }
+    for (int64_t j = d; j < d_align; ++j) {
+      dif[j] = mx[j] = mi[j] = 0;
+    }
     codes = (char *)alloc2M((size_t)n * code_size);
     for (int i = 0; i < n; ++i) {
       encode(data + i * d, get_data(i));
     }
-    reorderer.train(data, n);
   }
 
   char *get_data(int u) const { return codes + u * code_size; }
 
   void encode(const float *from, char *to) const {
     for (int j = 0; j < d; ++j) {
-      float x;
-      if (dif[j] == 0) {
-        x = 0.0;
-      } else {
-        x = (from[j] - mi[j]) / dif[j];
-      }
+      float x = (from[j] - mi[j]) / dif[j];
       if (x < 0) {
         x = 0.0;
       }
@@ -71,20 +64,8 @@ struct SQ8Quantizer {
 
   template <typename Pool>
   void reorder(const Pool &pool, const float *q, int *dst, int k) const {
-    int cap = pool.capacity();
-    auto computer = reorderer.get_computer(q);
-    searcher::MaxHeap<typename Reorderer::template Computer<0>::dist_type> heap(
-        k);
-    for (int i = 0; i < cap; ++i) {
-      if (i + 1 < cap) {
-        computer.prefetch(pool.id(i + 1), 1);
-      }
-      int id = pool.id(i);
-      float dist = computer(id);
-      heap.push(id, dist);
-    }
     for (int i = 0; i < k; ++i) {
-      dst[i] = heap.pop();
+      dst[i] = pool.id(i);
     }
   }
 

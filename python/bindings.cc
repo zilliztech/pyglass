@@ -97,11 +97,8 @@ struct Searcher {
   py::object search(py::object query, int k) {
     py::array_t<float, py::array::c_style | py::array::forcecast> items(query);
     int *ids;
-    {
-      py::gil_scoped_release l;
-      ids = new int[k];
-      searcher->Search(items.data(0), k, ids);
-    }
+    ids = new int[k];
+    searcher->Search(items.data(0), k, ids);
     py::capsule free_when_done(ids, [](void *f) { delete[] f; });
     return py::array_t<int>({k}, {sizeof(int)}, ids, free_when_done);
   }

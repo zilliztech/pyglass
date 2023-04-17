@@ -192,6 +192,15 @@ inline std::unique_ptr<SearcherBase> create_searcher(const Graph<int> &graph,
       printf("Metric not suppported\n");
       return nullptr;
     }
+  } else if (level == 2) {
+    if (m == Metric::L2) {
+      return std::make_unique<Searcher<SQ4Quantizer<Metric::L2>>>(graph);
+    } else if (m == Metric::IP) {
+      return std::make_unique<Searcher<SQ4Quantizer<Metric::IP>>>(graph);
+    } else {
+      printf("Metric not suppported\n");
+      return nullptr;
+    }
   } else {
     printf("Quantizer type not supported\n");
     return nullptr;

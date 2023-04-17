@@ -6,7 +6,7 @@ import psutil
 import os
 import json
 
-import glass
+import glassppy as glass
 from datasets import dataset_dict
 
 
