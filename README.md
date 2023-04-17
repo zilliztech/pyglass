@@ -29,7 +29,7 @@ bash build.sh
 >>> X = np.random.randn(n, d)
 >>> Y = np.random.randn(d)
 >>> index = glass.Index("HNSW", dim=d, metric="L2", R=32, L=50)
->>> graph = glass.build(X)
+>>> graph = index.build(X)
 >>> searcher = glass.Searcher(graph, X, "L2", 0)
 >>> searcher.optimize()
 >>> searcher.set_ef(32)
