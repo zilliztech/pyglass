@@ -3,12 +3,12 @@
     "glove-100-angular",
     "sift-128-euclidean",
     "fashion-mnist-784-euclidean",
-    "lastfm-64-dot",
     "nytimes-256-angular",
     "glove-25-angular"
   ],
   "index_types": [
-    "HNSW"
+    "HNSW",
+    "NSG"
   ],
   "R": 32,
   "L": 200,
@@ -31,8 +31,8 @@
     200,
     300
   ],
-  "runs": 1,
-  "batch": false,
+  "runs": 5,
+  "batch": true,
   "optimize": true,
   "plot": true
 }

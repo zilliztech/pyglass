@@ -98,14 +98,14 @@ if __name__ == '__main__':
     batch = config['batch']
     optimize = config['optimize']
     dataset_names = config['datasets']
-    datasets = [dataset_dict[dataset_name]() for dataset_name in dataset_names]
 
     results_dir = "results"
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
 
-    for dataset in datasets:
+    for dataset_name in dataset_names:
         plt.figure(figsize=(10, 6), dpi=120)
+        dataset = dataset_dict[dataset_name]()
         base = dataset.get_base()
         query = dataset.get_queries()
         gt = dataset.get_groundtruth(topk)

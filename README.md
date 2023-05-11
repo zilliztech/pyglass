@@ -74,3 +74,23 @@ Searcher accepts `level` parameter as the optimization level. You can set `level
 >>> ret = searcher.search(query=Y, k=10)
 >>> print(ret)
 ```
+
+## Performance
+
+Glass is among one of the top performant ann algorithms on [ann-benchmarks](https://ann-benchmarks.com/)
+
+### fashion-mnist-784-euclidean
+![](docs/figures/fashion-mnist-784-euclidean_10_euclidean.png)
+### gist-960-euclidean
+![](docs/figures/gist-960-euclidean_10_euclidean.png)
+### sift-128-euclidean
+![](docs/figures/sift-128-euclidean_10_euclidean.png)
+
+### Quick Benchmark
+
+1. Change configuration file `examples/config.json`
+2. Run benchmark
+```
+python3 examples/main.py
+```
+3. You could check plots on `results` folder
