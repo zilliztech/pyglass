@@ -225,14 +225,7 @@ inline float IP(const float *x, const float *y, int d) {
 
 inline float L2SqrSQ8_ext(const float *x, const uint8_t *y, int d,
                           const float *mi, const float *dif) {
-  // float sum = 0.0;
-  // for (int i = 0; i < d; ++i) {
-  //   float yy = (y[i] + 0.5f);
-  //   yy = yy * dif[i] + mi[i] * 255.0f;
-  //   auto dif = x[i] * 255.0f - yy;
-  //   sum += dif * dif;
-  // }
-  // return sum;
+#if defined(__AVX512F__)
   __m512 sum = _mm512_setzero_ps();
   __m512 dot5 = _mm512_set1_ps(0.5f);
   __m512 const_255 = _mm512_set1_ps(255.0f);
@@ -250,17 +243,22 @@ inline float L2SqrSQ8_ext(const float *x, const uint8_t *y, int d,
     sum = _mm512_fmadd_ps(d, d, sum);
   }
   return reduce_add_f32x16(sum);
+#else
+  float sum = 0.0;
+  for (int i = 0; i < d; ++i) {
+    float yy = (y[i] + 0.5f);
+    yy = yy * dif[i] + mi[i] * 255.0f;
+    auto dif = x[i] * 255.0f - yy;
+    sum += dif * dif;
+  }
+  return sum;
+#endif
 }
 
 inline float IPSQ8_ext(const float *x, const uint8_t *y, int d, const float *mi,
                        const float *dif) {
-  // float sum = 0.0;
-  // for (int i = 0; i < d; ++i) {
-  //   float yy = y[i] + 0.5f;
-  //   yy = yy * dif[i] + mi[i] * 255.0f;
-  //   sum += x[i] * yy;
-  // }
-  // return -sum;
+
+#if defined(__AVX512F__)
   __m512 sum = _mm512_setzero_ps();
   __m512 dot5 = _mm512_set1_ps(0.5f);
   __m512 const_255 = _mm512_set1_ps(255.0f);
@@ -277,6 +275,15 @@ inline float IPSQ8_ext(const float *x, const uint8_t *y, int d, const float *mi,
     sum = _mm512_fmadd_ps(xx, yy, sum);
   }
   return -reduce_add_f32x16(sum);
+#else
+  float sum = 0.0;
+  for (int i = 0; i < d; ++i) {
+    float yy = y[i] + 0.5f;
+    yy = yy * dif[i] + mi[i] * 255.0f;
+    sum += x[i] * yy;
+  }
+  return -sum;
+#endif
 }
 
 inline int32_t L2SqrSQ4(const uint8_t *x, const uint8_t *y, int d) {

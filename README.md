@@ -2,8 +2,6 @@
 
 pyglass is a library for fast inference of graph index for approximate nearest search.
 
-*Caution: Only AVX512 is supported now. So it may cause error if AVX512 is not enabled. Other instruction sets like AVX2 and NEON will be supported soon*
-
 ## Installation
 ### (Recommanded)Installation from Wheel
 pyglass can be installed using pip as follows:
@@ -16,6 +14,7 @@ pip3 install glassppy
 sudo apt-get update && sudo apt-get install -y build-essential git python3 python3-distutils python3-venv
 ```
 ``` bash
+pip3 install numpy
 pip3 install pybind11
 ```
 ``` bash
