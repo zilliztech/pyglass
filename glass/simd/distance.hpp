@@ -287,28 +287,7 @@ inline float IPSQ8_ext(const float *x, const uint8_t *y, int d, const float *mi,
 }
 
 inline int32_t L2SqrSQ4(const uint8_t *x, const uint8_t *y, int d) {
-#if defined(__AVX512VNNI__)
-  __m512i sum1 = _mm512_setzero_epi32(), sum2 = _mm512_setzero_epi32();
-  __m512i mask = _mm512_set1_epi8(0xf);
-  for (int i = 0; i < d; i += 128) {
-    auto xx = _mm512_loadu_si512((__m512i *)(x + i / 2));
-    auto yy = _mm512_loadu_si512((__m512i *)(y + i / 2));
-    auto xx1 = _mm512_and_si512(xx, mask);
-    auto xx2 = _mm512_and_si512(_mm512_srli_epi16(xx, 4), mask);
-    auto yy1 = _mm512_and_si512(yy, mask);
-    auto yy2 = _mm512_and_si512(_mm512_srli_epi16(yy, 4), mask);
-    auto d1 = _mm512_sub_epi8(xx1, yy1);
-    auto d2 = _mm512_sub_epi8(xx2, yy2);
-    d1 = _mm512_abs_epi8(d1);
-    d2 = _mm512_abs_epi8(d2);
-    // sum1 = _mm512_dpbusd_epi32(sum1, d1, d1);
-    // sum2 = _mm512_dpbusd_epi32(sum2, d2, d2);
-    asm("vpdpbusd %1, %2, %0" : "+x"(sum1) : "mx"(d1), "x"(d1));
-    asm("vpdpbusd %1, %2, %0" : "+x"(sum1) : "mx"(d2), "x"(d2));
-  }
-  sum1 = _mm512_add_epi32(sum1, sum2);
-  return reduce_add_i32x16(sum1);
-#elif defined(__AVX2__)
+#if defined(__AVX2__)
   __m256i sum1 = _mm256_setzero_si256(), sum2 = _mm256_setzero_si256();
   __m256i mask = _mm256_set1_epi8(0xf);
   for (int i = 0; i < d; i += 64) {
