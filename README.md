@@ -1,6 +1,14 @@
-# Graph Library for Approximate Nearest Search
+# Graph Library for Approximate Similarity Search
 
-pyglass is a library for fast inference of graph index for approximate nearest search.
+pyglass is a library for fast inference of graph index for approximate similarity search.
+
+## Features
+
+- Supports multiple graph algorithms, like [HNSW](https://github.com/nmslib/hnswlib) and [NSG](https://github.com/ZJULearning/nsg).
+- Supports multiple hardware platforms, like **AVX2**, **AVX512** and **NEON**.
+- No third-party library dependencies, does not rely on BLAS / NNPACK or any other computing framework.
+- Sophisticated memory management and data structure design, very low memory footprint.
+- It's high performant.
 
 ## Installation
 ### (Recommanded)Installation from Wheel
