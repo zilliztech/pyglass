@@ -2,10 +2,11 @@
 
 #include <cstdint>
 #include <cstdio>
-#include <emmintrin.h>
+#if defined(__SSE2__)
 #include <immintrin.h>
-#include <smmintrin.h>
-#include <xmmintrin.h>
+#elif defined(__aarch64__)
+#include <arm_neon.h>
+#endif
 
 #include "glass/common.hpp"
 #include "glass/simd/avx2.hpp"
@@ -16,120 +17,144 @@ namespace glass {
 template <typename T1, typename T2, typename U, typename... Params>
 using Dist = U (*)(const T1 *, const T2 *, int, Params...);
 
+GLASS_INLINE inline void prefetch_L1(const void *address) {
+#if defined(__SSE2__)
+  _mm_prefetch((const char *)address, _MM_HINT_T0);
+#else
+  __builtin_prefetch(address, 0, 3);
+#endif
+}
+
+GLASS_INLINE inline void prefetch_L2(const void *address) {
+#if defined(__SSE2__)
+  _mm_prefetch((const char *)address, _MM_HINT_T1);
+#else
+  __builtin_prefetch(address, 0, 2);
+#endif
+}
+
+GLASS_INLINE inline void prefetch_L3(const void *address) {
+#if defined(__SSE2__)
+  _mm_prefetch((const char *)address, _MM_HINT_T2);
+#else
+  __builtin_prefetch(address, 0, 1);
+#endif
+}
+
 inline void mem_prefetch(char *ptr, const int num_lines) {
   switch (num_lines) {
   default:
     [[fallthrough]];
   case 28:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 27:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 26:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 25:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 24:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 23:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 22:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 21:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 20:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 19:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 18:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 17:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 16:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 15:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 14:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 13:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 12:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 11:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 10:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 9:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 8:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 7:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 6:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 5:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 4:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 3:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 2:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 1:
-    _mm_prefetch(ptr, _MM_HINT_T0);
+    prefetch_L1(ptr);
     ptr += 64;
     [[fallthrough]];
   case 0:
@@ -182,6 +207,15 @@ inline float L2Sqr(const float *x, const float *y, int d) {
     sum = _mm256_add_ps(sum, _mm256_mul_ps(t, t));
   }
   return reduce_add_f32x8(sum);
+#elif defined(__aarch64__)
+  float32x4_t sum = vdupq_n_f32(0);
+  for (int32_t i = 0; i < d; i += 4) {
+    auto xx = vld1q_f32(x + i);
+    auto yy = vld1q_f32(y + i);
+    auto t = vsubq_f32(xx, yy);
+    sum = vmlaq_f32(sum, t, t);
+  }
+  return vaddvq_f32(sum);
 #else
   float sum = 0.0f;
   for (int i = 0; i < d; ++i) {
@@ -214,6 +248,14 @@ inline float IP(const float *x, const float *y, int d) {
     sum = _mm256_add_ps(sum, _mm256_mul_ps(xx, yy));
   }
   return -reduce_add_f32x8(sum);
+#elif defined(__aarch64__)
+  float32x4_t sum = vdupq_n_f32(0);
+  for (int32_t i = 0; i < d; i += 4) {
+    auto xx = vld1q_f32(x + i);
+    auto yy = vld1q_f32(y + i);
+    sum = vmlaq_f32(sum, xx, yy);
+  }
+  return vaddvq_f32(sum);
 #else
   float sum = 0.0;
   for (int i = 0; i < d; ++i) {

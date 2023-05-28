@@ -3,8 +3,8 @@
 #include "glass/common.hpp"
 #include "glass/memory.hpp"
 #include "glass/neighbor.hpp"
-#include "glass/simd/distance.hpp"
 #include "glass/quant/fp32_quant.hpp"
+#include "glass/simd/distance.hpp"
 
 #include <cmath>
 
@@ -104,4 +104,3 @@ struct SQ4Quantizer {
 };
 
 } // namespace glass
-
