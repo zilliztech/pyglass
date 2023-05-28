@@ -171,8 +171,7 @@ template <typename Quantizer> struct Searcher : public SearcherBase {
 
 inline std::unique_ptr<SearcherBase> create_searcher(const Graph<int> &graph,
                                                      const std::string &metric,
-                                                     int level = 1,
-                                                     int dim = 0) {
+                                                     int level = 1) {
   auto m = metric_map[metric];
   if (level == 0) {
     if (m == Metric::L2) {

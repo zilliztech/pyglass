@@ -73,10 +73,8 @@ public:
   std::unordered_set<tableint>
       deleted_elements; // contains internal ids of deleted elements
 
-  HierarchicalNSW(SpaceInterface<dist_t> *s) {}
-
   HierarchicalNSW(SpaceInterface<dist_t> *s, const std::string &location,
-                  bool nmslib = false, size_t max_elements = 0,
+                  bool /**nmslib*/ = false, size_t max_elements = 0,
                   bool allow_replace_deleted = false)
       : allow_replace_deleted_(allow_replace_deleted) {
     loadIndex(location, s, max_elements);
@@ -743,7 +741,7 @@ public:
     size_t dim = *((size_t *)dist_func_param_);
     std::vector<data_t> data;
     data_t *data_ptr = (data_t *)data_ptrv;
-    for (int i = 0; i < dim; i++) {
+    for (int i = 0; i < (int)dim; i++) {
       data.push_back(*data_ptr);
       data_ptr += 1;
     }

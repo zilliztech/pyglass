@@ -100,7 +100,9 @@ struct SQ4Quantizer {
     }
   };
 
-  auto get_computer(const float *query) const { return Computer(*this, query); }
+  auto get_computer(const float *query) const {
+    return Computer<0>(*this, query);
+  }
 };
 
 } // namespace glass
