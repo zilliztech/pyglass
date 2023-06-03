@@ -6,7 +6,7 @@ pyglass is a library for fast inference of graph index for approximate similarit
 
 - Supports multiple graph algorithms, like [**HNSW**](https://github.com/nmslib/hnswlib) and [**NSG**](https://github.com/ZJULearning/nsg).
 - Supports multiple hardware platforms, like **X86** and **ARM**. Support for **GPU** is on the way
-- No third-party library dependencies, does not rely on BLAS / NNPACK or any other computing framework.
+- No third-party library dependencies, does not rely on OpenBLAS / MKL or any other computing framework.
 - Sophisticated memory management and data structure design, very low memory footprint.
 - It's high performant.
 
@@ -31,20 +31,7 @@ bash build.sh
 ```
 
 ## Quick Tour
-
-```python
->>> import glassppy as glass
->>> import numpy as np
->>> n, d = 10000, 128
->>> X = np.random.randn(n, d)
->>> Y = np.random.randn(d)
->>> index = glass.Index("HNSW", dim=d, metric="L2", R=32, L=50)
->>> graph = index.build(X)
->>> searcher = glass.Searcher(graph, X, "L2", 0)
->>> searcher.optimize()
->>> searcher.set_ef(32)
->>> print(searcher.search(Y, 10))
-```
+A runnable demo is at [examples/demo.ipynb](https://github.com/zilliztech/pyglass/blob/master/examples/demo.ipynb). It's highly recommended to try it.
 
 ## Usage
 **Import library**

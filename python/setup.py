@@ -110,6 +110,7 @@ setup(
     long_description="""Graph Library for Approximate Similarity Search""",
     ext_modules=ext_modules,
     install_requires=['numpy'],
+    packages=['ann_dataset'],
     cmdclass={'build_ext': BuildExt},
     zip_safe=False,
 )

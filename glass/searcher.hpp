@@ -55,12 +55,7 @@ template <typename Quantizer> struct Searcher : public SearcherBase {
     this->nb = n;
     this->d = dim;
     quant = Quantizer(d);
-    printf("Starting quantizer training\n");
-    auto t1 = std::chrono::high_resolution_clock::now();
     quant.train(data, n);
-    auto t2 = std::chrono::high_resolution_clock::now();
-    printf("Done quantizer training, cost %.2lfs\n",
-           std::chrono::duration<double>(t2 - t1).count());
 
     sample_points_num = std::min(kOptimizePoints, nb - 1);
     std::vector<int> sample_points(sample_points_num);
