@@ -4,20 +4,21 @@ pyglass is a library for fast inference of graph index for approximate similarit
 
 ## Features
 
-- Supports multiple graph algorithms, like [HNSW](https://github.com/nmslib/hnswlib) and [NSG](https://github.com/ZJULearning/nsg).
-- Supports multiple hardware platforms, like **AVX2**, **AVX512** and **NEON**.
+- Supports multiple graph algorithms, like [**HNSW**](https://github.com/nmslib/hnswlib) and [**NSG**](https://github.com/ZJULearning/nsg).
+- Supports multiple hardware platforms, like **X86** and **ARM**. Support for **GPU** is on the way
 - No third-party library dependencies, does not rely on BLAS / NNPACK or any other computing framework.
 - Sophisticated memory management and data structure design, very low memory footprint.
 - It's high performant.
 
 ## Installation
-### (Recommanded)Installation from Wheel
+### Installation from Wheel
 pyglass can be installed using pip as follows:
 ```bash
 pip3 install glassppy
 ```
 
 ### Installation from Source
+If there's some problem when installing from wheel, you can try to build from source.
 ``` bash
 sudo apt-get update && sudo apt-get install -y build-essential git python3 python3-distutils python3-venv
 ```
