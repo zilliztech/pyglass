@@ -75,6 +75,33 @@ struct HNSW : public Builder {
       }
     }
     final_graph.initializer = std::move(initializer);
+
+//#pragma omp parallel for
+//      for (int i = 0; i < nb; ++i) {
+//          auto internal_id = hnsw->label_lookup_[i];
+//          int *edges = (int *)hnsw->get_linklist0(internal_id);
+//          for (int j = 1; j <= edges[0]; ++j) {
+//              int external_id = hnsw->getExternalLabel(edges[j]);
+//              final_graph.at(i, j - 1) = external_id;
+//          }
+//      }
+//      auto initializer = std::make_unique<HNSWInitializer>(nb, M);
+//      initializer->ep = hnsw->getExternalLabel(hnsw->enterpoint_node_);
+//      for (int i = 0; i < nb; ++i) {
+//          auto internal_id = hnsw->label_lookup_[i];
+//          int level = hnsw->element_levels_[internal_id];
+//          initializer->levels[i] = level;
+//          if (level > 0) {
+//              initializer->lists[i].assign(level * M, -1);
+//              for (int j = 1; j <= level; ++j) {
+//                  int *edges = (int *)hnsw->get_linklist(internal_id, j);
+//                  for (int k = 1; k <= edges[0]; ++k) {
+//                      initializer->at(j, i, k - 1) = hnsw->getExternalLabel(edges[k]);
+//                  }
+//              }
+//          }
+//      }
+//      final_graph.initializer = std::move(initializer);
   }
 
   Graph<int> GetGraph() override { return final_graph; }
