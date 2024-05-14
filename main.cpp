@@ -53,10 +53,12 @@ void ReadBin(const std::string &file_path,
 
 
 int main() {
-    cout << sizeof(unsigned) << ", " << sizeof(int64_t) << endl;
-    string data_file = "/data/deep1b/base.1B.fbin.crop_nb_10000000";
-    string query_file = "/data/deep1b/query.public.10K.fbin";
-    string gt_file = "/data/deep1b/deep-10M";
+//    string data_file = "/data/deep1b/base.1B.fbin.crop_nb_10000000";
+//    string query_file = "/data/deep1b/query.public.10K.fbin";
+//    string gt_file = "/data/deep1b/deep-10M";
+    string data_file = "/home/weijian/workspace/deep1m/deep1m_base.fbin";
+    string query_file = "/home/weijian/workspace/deep1m/deep1m_query.fbin";
+    string gt_file = "/home/weijian/workspace/deep1m/deep1m_gt";
 
     vector<vector<float>> data{}, queries{};
     vector<vector<int>> GT{};
