@@ -12,3 +12,9 @@ SET(CMAKE_CXX_FLAGS  "-Wall -Wextra -O3 -lrt -std=c++20 -march=native -fpic -fop
 
 add_executable(main main.cpp)
 target_link_libraries(main glass)
+
+add_executable(nc_distribute NC_distributed.cpp)
+target_link_libraries(nc_distribute glass)
+
+add_executable(sq4_rerank sq4_rerank.cpp)
+target_link_libraries(sq4_rerank glass)
