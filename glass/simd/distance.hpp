@@ -366,4 +366,72 @@ inline int32_t L2SqrSQ4(const uint8_t *x, const uint8_t *y, int d) {
 #endif
 }
 
+inline float _mm256_reduce_add_ps(__m256 v) {
+    __m128 vlow  = _mm256_castps256_ps128(v);
+    __m128 vhigh = _mm256_extractf128_ps(v, 1);
+    vlow  = _mm_add_ps(vlow, vhigh);
+
+    __m128 shuf = _mm_movehdup_ps(vlow);
+    __m128 sums = _mm_add_ps(vlow, shuf);
+    shuf = _mm_movehl_ps(shuf, sums);
+    sums = _mm_add_ss(sums, shuf);
+    return _mm_cvtss_f32(sums);
+}
+
+inline float L2SqrTO_ext(const float *x, const uint8_t *y, const float *centroid, int d) {
+#if defined(__AVX2__)
+    float mi = *(const float *)y;
+    float dif = *(const float *)(y + sizeof(float));
+    const uint8_t *code = y + 2 * sizeof(float);
+    __m256 sum_vec = _mm256_setzero_ps();
+    __m256 mi_vec = _mm256_set1_ps(mi);
+    __m256 dif_vec = _mm256_set1_ps(dif);
+    __m256 sixteen_vec = _mm256_set1_ps(16.0f);
+
+    for (int j = 0; j < d; j += 16) {
+        __m256 x_vec1 = _mm256_loadu_ps(x + j);
+        __m256 x_vec2 = _mm256_loadu_ps(x + j + 8);
+        __m256 centroid_vec1 = _mm256_loadu_ps(centroid + j);
+        __m256 centroid_vec2 = _mm256_loadu_ps(centroid + j + 8);
+        __m256 temp_vec1 = _mm256_mul_ps(_mm256_sub_ps(x_vec1, _mm256_add_ps(centroid_vec1, mi_vec)), sixteen_vec);
+        __m256 temp_vec2 = _mm256_mul_ps(_mm256_sub_ps(x_vec2, _mm256_add_ps(centroid_vec2, mi_vec)), sixteen_vec);
+        int byte_index = j / 2;
+        __m128i code_bytes = _mm_loadu_si64((const void *)(code + byte_index));
+        __m256i yy_vec1 = _mm256_cvtepu8_epi32(_mm_and_si128(code_bytes, _mm_set1_epi8(0x0F)));
+        __m256i yy_vec2 = _mm256_cvtepu8_epi32(_mm_and_si128(_mm_srli_epi16(code_bytes, 4), _mm_set1_epi8(0x0F)));
+        __m256 yy_float_vec1 = _mm256_mul_ps(_mm256_cvtepi32_ps(yy_vec1), dif_vec);
+        __m256 yy_float_vec2 = _mm256_mul_ps(_mm256_cvtepi32_ps(yy_vec2), dif_vec);
+        __m256 diff_vec1 = _mm256_sub_ps(temp_vec1, yy_float_vec1);
+        __m256 diff_vec2 = _mm256_sub_ps(temp_vec2, yy_float_vec2);
+        __m256 sqr_diff_vec1 = _mm256_mul_ps(diff_vec1, diff_vec1);
+        __m256 sqr_diff_vec2 = _mm256_mul_ps(diff_vec2, diff_vec2);
+        sum_vec = _mm256_add_ps(sum_vec, sqr_diff_vec1);
+        sum_vec = _mm256_add_ps(sum_vec, sqr_diff_vec2);
+    }
+    float dist = 0.0f;
+    dist += _mm256_reduce_add_ps(sum_vec);
+
+    return dist;
+#else
+    float mi = *(const float *)y;
+    float dif = *(const float *)(y + sizeof(float ));
+    const char *code = reinterpret_cast<const char *>(y + 2 * sizeof(float));
+    float dist = 0.0f;
+    for (int j = 0; j < d; ++j) {
+        int byte_index = j / 2;
+        uint8_t yy;
+        int group_index = j / 16;
+        int local_index = j % 16;
+        if (local_index < 8) {
+            yy = code[group_index * 8 + local_index] & 0x0F;
+        } else {
+            yy = (code[group_index * 8 + local_index - 8] >> 4) & 0x0F;
+        }
+        float diff = (x[j] - mi - centroid[j]) * 16.0f - static_cast<float>(yy) * dif;
+        dist += diff * diff;
+    }
+    return dist;
+#endif
+}
+
 } // namespace glass

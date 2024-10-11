@@ -1,5 +1,5 @@
 //
-// Created by weijian on 10/8/24.
+// Created by weijian on 10/9/24.
 //
 
 #include <iostream>
@@ -66,13 +66,10 @@ int main() {
     string data_file = std::format("/data/raid0/{}/{}_base.fbin", dataset, dataset);
     string query_file = std::format("/data/raid0/{}/{}_query.fbin", dataset, dataset);
     string gt_file = std::format("/data/raid0/{}/{}_gt", dataset, dataset);
-    int R = 64, L = 128;
     int nb = 0, d = 0;
     int nq = 0;
     int k = 10;
-    string index_path = std::format("/data/raid0/{}/{}_R{}_L{}", dataset, dataset, R, L);
-
-    bool update_index = !fs::exists(index_path);
+    int doq = 100;
 
     vector<float> data{};
     vector<vector<float>> queries{};
@@ -82,6 +79,10 @@ int main() {
         ReadBin(query_file, queries);
         ReadBin(gt_file, GT);
         ReadBin(data_file, tmp_data);
+
+        queries.resize(doq);
+        gt_file.resize(doq);
+
         nb = tmp_data.size(); d = tmp_data.front().size();
         nq = queries.size();
         data.resize(nb * d);
@@ -90,52 +91,62 @@ int main() {
             std::memcpy(data.data() + i * d, tmp_data[i].data(), d * 4);
         }
     }
-    glass::HNSW index(d, "L2", R, L);
-    if (update_index) {
-        index.Build(data.data(), nb);
-        index.final_graph.save(index_path);
-    } else {
-        index.final_graph.load(index_path);
-    }
 
-    glass::Searcher<glass::TOQuantizer<glass::Metric::L2>> searcher(index.final_graph);
-    searcher.SetData(data.data(), nb, d);
-    glass::FP32Quantizer<glass::Metric::L2> raw_data(d);
+    auto build_start = std::chrono::high_resolution_clock::now();
+    glass::TOQuantizer<glass::Metric::L2> raw_data(d);
     raw_data.train(data.data(), nb);
+    auto build_end = std::chrono::high_resolution_clock::now();
+    cout << "build time: " << std::chrono::duration<double>(build_end - build_start).count() << " s" << std::endl;
 
-    std::vector<int> efs{150};
-//    std::vector<int> efs{1000, 2000};
-    for (auto ef : efs) {
-        searcher.SetEf(ef);
-        searcher.Optimize(1);
-        vector<vector<int>> output(nq, vector<int>(k, 0));
+//    float* q = queries[0].data();
+//    auto computer = raw_data.get_computer(q);
+//
+//    for(int i = 0; i < 10; i++) {
+//
+//        cout << i << ", " << computer(i) << endl;
+//    }
 
-        auto start = std::chrono::high_resolution_clock::now();
-//#pragma omp parallel for schedule(dynamic) num_threads(8)
-        for (int i = 0; i < nq; i++) {
-            searcher.Search(queries[i].data(), k, output[i].data());
+    vector<vector<int>> output(nq, vector<int>(k, 0));
+
+    auto start = std::chrono::high_resolution_clock::now();
+#pragma omp parallel for schedule(dynamic) num_threads(10)
+    for (int i = 0; i < nq; i++) {
+//        searcher.Search(queries[i].data(), k, output[i].data());
+        float *q = queries[i].data();
+        auto computer = raw_data.get_computer(q);
+        glass::searcher::LinearPool<float>
+                pool(nb, k, k);
+        for(int j = 0; j < nb; j++) {
+            int id = j;
+            float dist = computer(id);
+            pool.insert(id, dist);
         }
-        auto end = std::chrono::high_resolution_clock::now();
-        cout << "search time: " << std::chrono::duration<double>(end - start).count() << " s" << std::endl;
-
-        std::atomic<int> total_coselection{0};
-        std::atomic<int> total_num{0};
-        std::vector<double> recalls{};
-//#pragma omp parallel for
-        for (int i = 0; i < nq; i++) {
-            int cur_coselection = 0;
-            std::set gt(GT[i].begin(), GT[i].begin() + k);
-            std::set res(output[i].begin(), output[i].begin() + k);
-            for (auto item: res) {
-                if (gt.find(static_cast<int64_t>(item)) != gt.end()) {
-                    cur_coselection++;
-                }
-            }
-            total_num += 1;
-            total_coselection += cur_coselection;
-            recalls.push_back((double)cur_coselection * 100 / k);
-        }
-
-        std::cout << "R = " << R << ", L = " << L << ", ef = " << ef << ", recall = " << (double) total_coselection * 100 / (total_num * k) << " %" << std::endl;
+        raw_data.reorder(pool, q, output[i].data(), k);
+//        for(int j = 0; j < k; j++) {
+//            output[i][j] = pool.data_[j].id;
+//        }
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "search time: " << std::chrono::duration<double>(end - start).count() << " s" << std::endl;
+
+    std::atomic<int> total_coselection{0};
+    std::atomic<int> total_num{0};
+    std::vector<double> recalls{};
+//#pragma omp parallel for
+    for (int i = 0; i < nq; i++) {
+        int cur_coselection = 0;
+        std::set gt(GT[i].begin(), GT[i].begin() + k);
+        std::set res(output[i].begin(), output[i].begin() + k);
+        for (auto item: res) {
+            if (gt.find(static_cast<int64_t>(item)) != gt.end()) {
+                cur_coselection++;
+            }
+        }
+        total_num += 1;
+        total_coselection += cur_coselection;
+        recalls.push_back((double)cur_coselection * 100 / k);
+    }
+
+    std::cout << "recall = " << (double) total_coselection * 100 / (total_num * k) << " %" << std::endl;
+
 }

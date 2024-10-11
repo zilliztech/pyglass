@@ -18,3 +18,6 @@ target_link_libraries(nc_distribute glass)
 
 add_executable(sq4_rerank sq4_rerank.cpp)
 target_link_libraries(sq4_rerank glass)
+
+add_executable(to_brute_force to_brute_force.cpp)
+target_link_libraries(to_brute_force glass)
