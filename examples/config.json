@@ -1,38 +1,37 @@
 {
   "datasets": [
-    "glove-100-angular",
-    "sift-128-euclidean",
-    "fashion-mnist-784-euclidean",
-    "nytimes-256-angular",
-    "glove-25-angular"
+    "sift-128-euclidean"
   ],
-  "index_types": [
-    "HNSW",
-    "NSG"
+  "index_params": [
+    [
+      "HNSW",
+      {
+        "R": 48,
+        "L": 200
+      }
+    ]
   ],
-  "R": 32,
-  "L": 200,
-  "levels": [
-    0,
-    1,
-    2
+  "rebuild": false,
+  "build_quant": "SQ4U",
+  "search_quants": [
+    "SQ4UA"
   ],
-  "topk": 10,
+  "topks": [
+    10
+  ],
   "efs": [
-    10,
     15,
     20,
+    25,
     30,
+    35,
     40,
-    60,
-    80,
-    100,
-    150,
-    200,
-    300
+    50,
+    70,
+    100
   ],
   "runs": 5,
-  "batch": true,
-  "optimize": true,
-  "plot": true
+  "batch": [
+    true
+  ]
 }
