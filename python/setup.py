@@ -20,10 +20,10 @@ include_dirs = [
 bindings_dir = 'python'
 if bindings_dir in os.path.basename(os.getcwd()):
     source_files = ['./bindings.cc']
-    include_dirs.extend(['../'])
+    include_dirs.extend(['../', '../third_party/helpa'])
 else:
     source_files = ['./python/bindings.cc']
-    include_dirs.extend(['./'])
+    include_dirs.extend(['./', './third_party/helpa'])
 
 
 libraries = []
@@ -32,7 +32,7 @@ extra_objects = []
 
 ext_modules = [
     Extension(
-        'glassppy',
+        'glass',
         source_files,
         include_dirs=include_dirs,
         libraries=libraries,
@@ -57,16 +57,10 @@ def has_flag(compiler, flagname):
 
 
 def cpp_flag(compiler):
-    """Return the -std=c++[11/14/17/20] compiler flag.
-    """
-    if has_flag(compiler, '-std=c++17'):
-        return '-std=c++17'
-    elif has_flag(compiler, '-std=c++14'):
-        return '-std=c++14'
-    elif has_flag(compiler, '-std=c++11'):
-        return '-std=c++11'
+    if has_flag(compiler, '-std=c++20'):
+        return '-std=c++20'
     else:
-        raise RuntimeError('Unsupported compiler -- at least C++11 support '
+        raise RuntimeError('Unsupported compiler -- at least C++20 support '
                            'is needed!')
 
 class BuildExt(build_ext):
@@ -103,7 +97,7 @@ class BuildExt(build_ext):
 
 
 setup(
-    name='glassppy',
+    name='glass',
     version=__version__,
     description='Graph Library for Approximate Similarity Search',
     author='',

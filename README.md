@@ -11,14 +11,8 @@ pyglass is a library for fast inference of graph index for approximate similarit
 - It's high performant.
 
 ## Installation
-### Installation from Wheel
-pyglass can be installed using pip as follows:
-```bash
-pip3 install glassppy
-```
 
 ### Installation from Source
-If there's some problem when installing from wheel, you can try to build from source.
 ``` bash
 sudo apt-get update && sudo apt-get install -y build-essential git python3 python3-distutils python3-venv
 ```
@@ -36,29 +30,28 @@ A runnable demo is at [examples/demo.ipynb](https://github.com/zilliztech/pyglas
 ## Usage
 **Import library**
 ```python
->>> import glassppy as glass
+>>> import glass
 ```
 **Load Data**
 ```python
+>>> import numpy as np
 >>> n, d = 10000, 128
 >>> X = np.random.randn(n, d)
 >>> Y = np.random.randn(d)
 ```
 **Create Index**
-pyglass supports **HNSW** and **NSG** index currently
+pyglass supports **HNSW** and **NSG** index currently, with different quantization support
 ```python
->>> index = glass.Index(index_type="HNSW", dim=d, metric="L2", R=32, L=50)
->>> index = glass.Index(index_type="NSG", dim=d, metric="L2", R=32, L=50)
+>>> index = glass.Index(index_type="HNSW", metric="L2", R=32, L=50)
+>>> index = glass.Index(index_type="NSG", metric="L2", R=32, L=50, quant="SQ8U")
 ```
 **Build Graph**
 ```python
 >>> graph = index.build(X)
 ```
 **Create Searcher**
-Searcher accepts `level` parameter as the optimization level. You can set `level` as `0` or `1` or `2`. The higher the level, the faster the searching, but it may cause unstable recall.
 ```python
->>> optimize_level = 2
->>> searcher = glass.Searcher(graph=graph, data=X, metric="L2", level=optimize_level)
+>>> searcher = glass.Searcher(graph=graph, data=X, metric="L2", quantizer="SQ4U")
 >>> searcher.set_ef(32)
 ```
 **(Optional) Optimize Searcher**
@@ -70,6 +63,21 @@ Searcher accepts `level` parameter as the optimization level. You can set `level
 >>> ret = searcher.search(query=Y, k=10)
 >>> print(ret)
 ```
+
+## Supported Quantization Methods
+
+- FP8_E5M2
+- PQ8
+- SQ8
+- SQ8U
+- SQ6
+- SQ4
+- SQ4U
+- SQ4UA
+- SQ2U
+- BinaryQuant
+
+**Rule of Thumb**: Use SQ8U for indexing, and SQ4U for searching is almost always a good choice.
 
 ## Performance
 
@@ -89,4 +97,16 @@ Glass is among one of the top performant ann algorithms on [ann-benchmarks](http
 ```
 python3 examples/main.py
 ```
-3. You could check plots on `results` folder
+
+## Citation
+
+You can cite the PyGlass repo as follows:
+```bibtex
+@misc{PyGlass,
+    author = {Zihao Wang},
+    title = {Graph Library for Approximate Similarity Search},
+    url = {https://github.com/zilliztech/pyglass},
+    year = {2025},
+    month = {4},
+}
+```
