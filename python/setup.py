@@ -1,14 +1,11 @@
 import os
-import sys
-import platform
-
 import numpy as np
 import pybind11
 import setuptools
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
-__version__ = '1.0.3'
+__version__ = "1.0.3"
 
 
 include_dirs = [
@@ -17,13 +14,13 @@ include_dirs = [
 ]
 
 # compatibility when run in python_bindings
-bindings_dir = 'python'
+bindings_dir = "python"
 if bindings_dir in os.path.basename(os.getcwd()):
-    source_files = ['./bindings.cc']
-    include_dirs.extend(['../', '../third_party/helpa'])
+    source_files = ["./bindings.cc"]
+    include_dirs.extend(["../", "../third_party/helpa"])
 else:
-    source_files = ['./python/bindings.cc']
-    include_dirs.extend(['./', './third_party/helpa'])
+    source_files = ["./python/bindings.cc"]
+    include_dirs.extend(["./", "./third_party/helpa"])
 
 
 libraries = []
@@ -32,11 +29,11 @@ extra_objects = []
 
 ext_modules = [
     Extension(
-        'glass',
+        "glass",
         source_files,
         include_dirs=include_dirs,
         libraries=libraries,
-        language='c++',
+        language="c++",
         extra_objects=extra_objects,
     ),
 ]
@@ -47,8 +44,9 @@ def has_flag(compiler, flagname):
     the specified compiler.
     """
     import tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
+
+    with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
+        f.write("int main (int argc, char **argv) { return 0; }")
         try:
             compiler.compile([f.name], extra_postargs=[flagname])
         except setuptools.distutils.errors.CompileError:
@@ -57,55 +55,51 @@ def has_flag(compiler, flagname):
 
 
 def cpp_flag(compiler):
-    if has_flag(compiler, '-std=c++20'):
-        return '-std=c++20'
+    if has_flag(compiler, "-std=c++20"):
+        return "-std=c++20"
     else:
-        raise RuntimeError('Unsupported compiler -- at least C++20 support '
-                           'is needed!')
+        raise RuntimeError(
+            "Unsupported compiler -- at least C++20 support " "is needed!"
+        )
+
 
 class BuildExt(build_ext):
     """A custom build extension for adding compiler-specific options."""
+
     c_opts = {
-        'unix': "-Ofast -lrt -march=native -fpic -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0".split()
+        "unix": "-Ofast -lrt -march=native -fpic -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0".split()
     }
 
     link_opts = {
-        'unix': [],
+        "unix": [],
     }
 
-    c_opts['unix'].append("-fopenmp")
-    link_opts['unix'].extend(['-fopenmp', '-pthread'])
+    c_opts["unix"].append("-fopenmp")
+    link_opts["unix"].extend(["-fopenmp", "-pthread"])
 
     def build_extensions(self):
-        ct = self.compiler.compiler_type
-        opts = self.c_opts.get(ct, [])
-        if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' %
-                        self.distribution.get_version())
-            opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
-        elif ct == 'msvc':
-            opts.append('/DVERSION_INFO=\\"%s\\"' %
-                        self.distribution.get_version())
+        opts = self.c_opts.get("unix", [])
+        opts.append(f'-DVERSION_INFO="{self.distribution.get_version()}"')
+        opts.append(cpp_flag(self.compiler))
+        if has_flag(self.compiler, "-fvisibility=hidden"):
+            opts.append("-fvisibility=hidden")
 
         for ext in self.extensions:
             ext.extra_compile_args.extend(opts)
-            ext.extra_link_args.extend(self.link_opts.get(ct, []))
+            ext.extra_link_args.extend(self.link_opts.get("unix", []))
 
         build_ext.build_extensions(self)
 
 
 setup(
-    name='glass',
+    name="glass",
     version=__version__,
-    description='Graph Library for Approximate Similarity Search',
-    author='',
+    description="Graph Library for Approximate Similarity Search",
+    author="Zihao Wang",
     long_description="""Graph Library for Approximate Similarity Search""",
     ext_modules=ext_modules,
-    install_requires=['numpy'],
-    packages=['ann_dataset'],
-    cmdclass={'build_ext': BuildExt},
+    install_requires=["numpy"],
+    packages=["ann_dataset"],
+    cmdclass={"build_ext": BuildExt},
     zip_safe=False,
 )
-
