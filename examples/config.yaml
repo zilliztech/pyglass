@@ -1,0 +1,28 @@
+datasets:
+  - sift-128-euclidean
+
+index_params:
+  - index_type: HNSW
+    index_args:
+      R: 48
+      L: 200
+  - index_type: NSG
+    index_args:
+      R: 48
+      L: 64
+
+rebuild: false
+build_quant: SQ4U
+search_quants:
+  - SQ4U
+topks:
+  - 100
+efs:
+  - 100
+  - 200
+  - 300
+  - 400
+  - 500
+runs: 5
+batch:
+  - true

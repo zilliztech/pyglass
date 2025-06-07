@@ -110,3 +110,7 @@ You can cite the PyGlass repo as follows:
     month = {4},
 }
 ```
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=hhy3/pyglass&type=Date)](https://www.star-history.com/#hhy3/pyglass&Date)
