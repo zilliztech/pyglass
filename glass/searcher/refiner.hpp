@@ -46,14 +46,15 @@ template <QuantConcept QuantType> struct Refiner : GraphSearcherBase {
     return inner->GetLastSearchAvgDistCmps();
   }
 
-  void Search(const float *q, int32_t k, int32_t *dst) const override {
+  void Search(const float *q, int32_t k, int32_t *dst,
+              float *scores = nullptr) const override {
     int32_t reorder_k = (int32_t)(k * reorder_mul);
     if (reorder_k == k) {
-      inner->Search(q, k, dst);
+      inner->Search(q, k, dst, scores);
       return;
     }
     std::vector<int32_t> ret(reorder_k);
-    inner->Search(q, reorder_k, ret.data());
+    inner->Search(q, reorder_k, ret.data(), nullptr);
     auto computer = quant.get_computer(q);
     MaxHeap<Neighbor<typename decltype(computer)::dist_type>> heap(k);
     for (int i = 0; i < reorder_k; ++i) {
@@ -65,32 +66,38 @@ template <QuantConcept QuantType> struct Refiner : GraphSearcherBase {
       heap.push({id, dist});
     }
     for (int i = heap.size() - 1; i >= 0; --i) {
-      dst[i] = heap.pop().id;
+      auto top = heap.pop();
+      dst[i] = top.id;
+      if (scores) {
+        scores[i] = top.distance;
+      }
     }
   }
 
-  void SearchBatch(const float *qs, int32_t nq, int32_t k,
-                   int32_t *dst) const override {
+  void SearchBatch(const float *qs, int32_t nq, int32_t k, int32_t *dst,
+                   float *scores = nullptr) const override {
     int32_t reorder_k = (int32_t)(k * reorder_mul);
     if (reorder_k == k) {
-      inner->SearchBatch(qs, nq, k, dst);
+      inner->SearchBatch(qs, nq, k, dst, scores);
       return;
     }
     std::vector<int32_t> ret(nq * reorder_k);
-    inner->SearchBatch(qs, nq, reorder_k, ret.data());
+    inner->SearchBatch(qs, nq, reorder_k, ret.data(), nullptr);
 
 #pragma omp parallel for schedule(dynamic)
     for (int32_t i = 0; i < nq; ++i) {
       const float *cur_q = qs + i * dim;
       const int32_t *cur_ret = &ret[i * reorder_k];
       int32_t *cur_dst = dst + i * k;
+      float *cur_scores = scores + i * k;
       auto computer = quant.get_computer(cur_q);
-      RefineImpl(computer, cur_ret, reorder_k, cur_dst, k);
+      RefineImpl(computer, cur_ret, reorder_k, cur_dst, cur_scores, k);
     }
   }
 
   void RefineImpl(const ComputerConcept auto &computer, const int32_t *from,
-                  int32_t from_len, int32_t *to, int32_t to_len) const {
+                  int32_t from_len, int32_t *to, float *scores,
+                  int32_t to_len) const {
     MaxHeap<Neighbor<typename std::decay_t<decltype(computer)>::dist_type>>
         heap(to_len);
     for (int32_t j = 0; j < from_len; ++j) {
@@ -102,7 +109,11 @@ template <QuantConcept QuantType> struct Refiner : GraphSearcherBase {
       heap.push({id, dist});
     }
     for (int j = heap.size() - 1; j >= 0; --j) {
-      to[j] = heap.pop().id;
+      auto top = heap.pop();
+      to[j] = top.id;
+      if (scores) {
+        scores[j] = top.distance;
+      }
     }
   }
 };

@@ -55,7 +55,7 @@ class Glass:
         self.n = n
 
     def run_prepared_query(self):
-        self.res = self.searcher.search(self.q, self.n)
+        self.res, self.dis = self.searcher.search(self.q, self.n)
 
     def get_prepared_query_results(self):
         return self.res
@@ -66,7 +66,7 @@ class Glass:
         self.nq = len(X)
 
     def run_batch_query(self):
-        self.result = self.searcher.batch_search(self.queries, self.n)
+        self.result, self.dis = self.searcher.batch_search(self.queries, self.n)
 
     def get_batch_results(self):
         return self.result.reshape(self.nq, -1)
@@ -83,7 +83,6 @@ class Glass:
 
 
 if __name__ == "__main__":
-    print(sys.argv)
     if len(sys.argv) < 2:
         config_path = "examples/config.yaml"
     else:
@@ -101,8 +100,6 @@ if __name__ == "__main__":
     runs = config["runs"]
     batch = config["batch"]
     dataset_names = config["datasets"]
-
-    print(index_params)
 
     results_dir = "results"
     if not os.path.exists(results_dir):

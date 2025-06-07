@@ -6,9 +6,10 @@ namespace glass {
 
 struct SearcherBase {
   virtual void SetData(const float *data, int32_t n, int32_t dim) = 0;
-  virtual void Search(const float *q, int32_t k, int32_t *dst) const = 0;
-  virtual void SearchBatch(const float *qs, int32_t nq, int32_t k,
-                           int32_t *dst) const = 0;
+  virtual void Search(const float *q, int32_t k, int32_t *dst,
+                      float *scores = nullptr) const = 0;
+  virtual void SearchBatch(const float *qs, int32_t nq, int32_t k, int32_t *dst,
+                           float *scores = nullptr) const = 0;
   virtual ~SearcherBase() = default;
 };
 

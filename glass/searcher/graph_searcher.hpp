@@ -114,7 +114,7 @@ template <QuantConcept Quant> struct GraphSearcher : public GraphSearcherBase {
     auto timeit = [&] {
       auto st = std::chrono::high_resolution_clock::now();
       SearchBatch(optimize_queries.data(), sample_points_num, kTryK,
-                  dummy_dst.data());
+                  dummy_dst.data(), nullptr);
       auto ed = std::chrono::high_resolution_clock::now();
       return std::chrono::duration<double>(ed - st).count();
     };
@@ -157,13 +157,14 @@ template <QuantConcept Quant> struct GraphSearcher : public GraphSearcherBase {
     std::vector<float>().swap(optimize_queries);
   }
 
-  void Search(const float *q, int32_t k, int32_t *dst) const override {
+  void Search(const float *q, int32_t k, int32_t *dst,
+              float *scores = nullptr) const override {
     auto computer = quant.get_computer(q);
     auto &pool = pools[omp_get_thread_num()];
     pool.reset(nb, std::max(k, ef), std::max(k, ef));
     graph.initialize_search(pool, computer);
     SearchImpl1(pool, computer);
-    pool.to_sorted(dst, k);
+    pool.to_sorted(dst, scores, k);
   }
 
   mutable double last_search_avg_dist_cmps = 0.0;
@@ -171,19 +172,20 @@ template <QuantConcept Quant> struct GraphSearcher : public GraphSearcherBase {
     return last_search_avg_dist_cmps;
   }
 
-  void SearchBatch(const float *qs, int32_t nq, int32_t k,
-                   int32_t *dst) const override {
+  void SearchBatch(const float *qs, int32_t nq, int32_t k, int32_t *dst,
+                   float *scores = nullptr) const override {
     std::atomic<int64_t> total_dist_cmps{0};
 #pragma omp parallel for schedule(dynamic)
     for (int32_t i = 0; i < nq; ++i) {
       const float *cur_q = qs + i * d;
       int32_t *cur_dst = dst + i * k;
+      float *cur_scores = scores ? scores + i * k : nullptr;
       auto computer = quant.get_computer(cur_q);
       auto &pool = pools[omp_get_thread_num()];
       pool.reset(nb, ef, std::max(k, ef));
       graph.initialize_search(pool, computer);
       SearchImpl2(pool, computer);
-      pool.to_sorted(cur_dst, k);
+      pool.to_sorted(cur_dst, cur_scores, k);
       total_dist_cmps.fetch_add(computer.dist_cmps());
     }
     last_search_avg_dist_cmps = (double)total_dist_cmps.load() / nq;

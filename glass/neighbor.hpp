@@ -19,14 +19,14 @@ namespace glass {
 template <typename Pool>
 concept NeighborPoolConcept =
     requires(Pool pool, int32_t u, typename Pool::dist_type dist, int32_t *ids,
-             int32_t length, int32_t n, int32_t ef, int32_t cap) {
+             float *dis, int32_t length, int32_t n, int32_t ef, int32_t cap) {
       { pool.reset(n, ef, cap) };
       { pool.insert(u, dist) } -> std::same_as<bool>;
       { pool.pop() } -> std::same_as<int32_t>;
       { pool.has_next() } -> std::same_as<bool>;
       { pool.set_visited(u) };
       { pool.check_visited(u) } -> std::same_as<bool>;
-      { pool.to_sorted(ids, length) };
+      { pool.to_sorted(ids, dis, length) };
     };
 
 template <typename Block = uint64_t> struct Bitset {
@@ -424,9 +424,12 @@ template <typename dist_t, typename BitsetType = Bitset<>> struct LinearPool {
   void set_checked(int &id) { id |= 1 << 31; }
   bool is_checked(int id) const { return id >> 31 & 1; }
 
-  void to_sorted(int32_t *ids, int32_t length) const {
+  void to_sorted(int32_t *ids, float *scores, int32_t length) const {
     for (int32_t i = 0; i < length; ++i) {
       ids[i] = id(i);
+      if (scores) {
+        scores[i] = dist(i);
+      }
     }
   }
 

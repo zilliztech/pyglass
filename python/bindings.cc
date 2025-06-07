@@ -107,31 +107,41 @@ struct Searcher {
   py::object search(py::object query, int k) {
     py::array_t<float, py::array::c_style | py::array::forcecast> items(query);
     int *ids;
+    float *dis;
     {
       py::gil_scoped_release l;
       ids = new int[k];
-      searcher->Search(items.data(0), k, ids);
+      dis = new float[k];
+      searcher->Search(items.data(0), k, ids, dis);
     }
     py::capsule free_when_done(ids, [](void *f) { delete[] f; });
-    return py::array_t<int>({k}, {sizeof(int)}, ids, free_when_done);
+    py::capsule free_when_done_dis(dis, [](void *f) { delete[] f; });
+    return py::make_tuple(
+        py::array_t<int>({k}, {sizeof(int)}, ids, free_when_done),
+        py::array_t<float>({k}, {sizeof(float)}, dis, free_when_done_dis));
   }
 
   py::object batch_search(py::object query, int k, int num_threads = 0) {
     py::array_t<float, py::array::c_style | py::array::forcecast> items(query);
     auto buffer = items.request();
     int32_t *ids;
+    float *dis;
     size_t nq, dim;
     {
       py::gil_scoped_release l;
       get_input_array_shapes(buffer, &nq, &dim);
       ids = new int[nq * k];
+      dis = new float[nq * k];
       if (num_threads != 0) {
         omp_set_num_threads(num_threads);
       }
-      searcher->SearchBatch(items.data(0), nq, k, ids);
+      searcher->SearchBatch(items.data(0), nq, k, ids, dis);
     }
     py::capsule free_when_done(ids, [](void *f) { delete[] f; });
-    return py::array_t<int>({nq * k}, {sizeof(int)}, ids, free_when_done);
+    py::capsule free_when_done_dis(dis, [](void *f) { delete[] f; });
+    return py::make_tuple(
+        py::array_t<int>({nq * k}, {sizeof(int)}, ids, free_when_done),
+        py::array_t<float>({nq * k}, {sizeof(float)}, dis, free_when_done_dis));
   }
 
   void set_ef(int ef) { searcher->SetEf(ef); }
