@@ -91,6 +91,7 @@ Glass is among one of the top performant ann algorithms on [ann-benchmarks](http
 ```
 python3 examples/main.py
 ```
+If you encounter network issues when downloading datasets, you can try setting the `HF_ENDPOINT` environment variable to `https://hf-mirror.com` or something else.
 
 ## Citation
 

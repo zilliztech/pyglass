@@ -3,6 +3,7 @@ import h5py
 import numpy as np
 from sklearn import preprocessing
 
+HF_ENDPOINT = os.getenv("HF_ENDPOINT", "https://huggingface.co")
 
 def hdf5_read(fname, metric):
     file = h5py.File(fname, "r")
@@ -62,7 +63,7 @@ class Dataset:
 
 
 def download(name):
-    url = f"https://huggingface.co/datasets/hhy3/ann-datasets/resolve/main/{name}.hdf5"
+    url = f"{HF_ENDPOINT}/datasets/hhy3/ann-datasets/resolve/main/{name}.hdf5"
     return url
 
 
