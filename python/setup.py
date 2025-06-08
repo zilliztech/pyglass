@@ -29,7 +29,7 @@ extra_objects = []
 
 ext_modules = [
     Extension(
-        "glass",
+        "core",
         source_files,
         include_dirs=include_dirs,
         libraries=libraries,

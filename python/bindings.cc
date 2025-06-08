@@ -236,8 +236,8 @@ double build_graph(const std::string &index_type, py::object input,
   return index.get_construction_time();
 }
 
-PYBIND11_PLUGIN(glass) {
-  py::module m("glass");
+PYBIND11_PLUGIN(core) {
+  py::module m("core");
 
   m.def("set_num_threads", &set_num_threads, py::arg("num_threads"));
 

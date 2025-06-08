@@ -14,14 +14,8 @@ pyglass is a library for fast inference of graph index for approximate similarit
 
 ### Installation from Source
 ``` bash
-sudo apt-get update && sudo apt-get install -y build-essential git python3 python3-distutils python3-venv
-```
-``` bash
-pip3 install numpy
-pip3 install pybind11
-```
-``` bash
-bash build.sh
+pip install -r requirements.txt
+pip install -v -e "python"
 ```
 
 ## Quick Tour
