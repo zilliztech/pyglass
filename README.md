@@ -13,9 +13,26 @@ pyglass is a library for fast inference of graph index for approximate similarit
 ## Installation
 
 ### Installation from Source
-``` bash
-pip install -r requirements.txt
-pip install -v -e "python"
+It is recommended to use `uv` for setting up the development environment.
+
+1. **Install `uv`**
+```bash
+pip install uv
+```
+
+2. **Create and Activate Virtual Environment**
+```bash
+# Create the virtual environment in a .venv directory
+uv venv --seed --python 3.11
+# Activate the environment (on bash/zsh)
+source .venv/bin/activate
+```
+*Note: For other shells like Fish or Powershell, use the corresponding activation script in the `.venv/bin/` directory.*
+
+3. **Install the Project**
+```bash
+# Install the project and its dependencies in editable mode
+uv pip install -v -e "python"
 ```
 
 ## Quick Tour

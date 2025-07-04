@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "numpy", "pybind11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glass"
+version = "2.1.0"
+description = "Graph Library for Approximate Similarity Search"
+readme = "README.md"
+authors = [{name = "Zihao Wang"}]
+dependencies = [
+    "numpy",
+    "psutil",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "h5py",
+    "pyyaml",
+]
