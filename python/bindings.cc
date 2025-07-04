@@ -236,9 +236,7 @@ double build_graph(const std::string &index_type, py::object input,
   return index.get_construction_time();
 }
 
-PYBIND11_PLUGIN(core) {
-  py::module m("core");
-
+PYBIND11_MODULE(glass, m) {
   m.def("set_num_threads", &set_num_threads, py::arg("num_threads"));
 
   py::class_<Graph>(m, "Graph")
@@ -295,5 +293,4 @@ PYBIND11_PLUGIN(core) {
         py::arg("graph_file"), py::arg("metric"), py::arg("quant"),
         py::arg("R"), py::arg("L"));
 
-  return m.ptr();
 }
