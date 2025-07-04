@@ -1,9 +1,0 @@
-numpy
-pybind11
-psutil
-matplotlib
-seaborn
-scikit-learn
-h5py
-pyyaml
-
