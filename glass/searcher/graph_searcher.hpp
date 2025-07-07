@@ -13,30 +13,6 @@
 
 namespace glass {
 
-namespace params {
-
-constexpr inline bool SQ8_REFINE = true;
-constexpr inline bool SQ8U_REFINE = true;
-constexpr inline bool SQ8P_REFINE = true;
-constexpr inline bool SQ4U_REFINE = true;
-constexpr inline bool SQ4UA_REFINE = true;
-constexpr inline bool SQ2U_REFINE = true;
-constexpr inline bool SQ1_REFINE = true;
-constexpr inline bool PQ8_REFINE = true;
-
-constexpr inline float SQ8_REFINE_FACTOR = 1.5f;
-constexpr inline float SQ8U_REFINE_FACTOR = 1.5f;
-constexpr inline float SQ8P_REFINE_FACTOR = 1.5f;
-constexpr inline float SQ4U_REFINE_FACTOR = 1.5f;
-constexpr inline float SQ4UA_REFINE_FACTOR = 1.5f;
-constexpr inline float SQ2U_REFINE_FACTOR = 3.0f;
-constexpr inline float SQ1_REFINE_FACTOR = 3.0f;
-constexpr inline float PQ8_REFINE_FACTOR = 1.5f;
-
-template <Metric metric> using RefineQuantizer = FP16Quantizer<metric>;
-
-} // namespace params
-
 template <QuantConcept Quant> struct GraphSearcher : public GraphSearcherBase {
 
   int32_t d;
@@ -259,18 +235,62 @@ template <QuantConcept Quant> struct GraphSearcher : public GraphSearcherBase {
   }
 };
 
+inline float get_refine_factor(const std::string &quantizer) {
+  auto qua = quantizer_map[quantizer];
+  if (qua == QuantizerType::SQ8U)
+    return 1.5f;
+  if (qua == QuantizerType::SQ8)
+    return 1.5f;
+  if (qua == QuantizerType::SQ8P)
+    return 1.5f;
+  if (qua == QuantizerType::SQ4U)
+    return 1.5f;
+  if (qua == QuantizerType::SQ4UA)
+    return 1.5f;
+  if (qua == QuantizerType::SQ2U)
+    return 3.0f;
+  if (qua == QuantizerType::SQ1)
+    return 3.0f;
+  if (qua == QuantizerType::PQ8)
+    return 1.5f;
+  return 1.0f;
+}
+
+template <Metric metric, typename... Args>
+std::unique_ptr<GraphSearcherBase>
+make_refiner(std::unique_ptr<GraphSearcherBase> inner,
+             const std::string &refine_quant, float factor, Args... args) {
+  auto refine_qua = quantizer_map[refine_quant];
+  if (refine_qua == QuantizerType::FP16) {
+    return std::make_unique<Refiner<FP16Quantizer<metric>>>(std::move(inner),
+                                                            factor, args...);
+  } else if (refine_qua == QuantizerType::FP32) {
+    return std::make_unique<Refiner<FP32Quantizer<metric>>>(std::move(inner),
+                                                            factor, args...);
+  } else if (refine_qua == QuantizerType::SQ8U) {
+    return std::make_unique<Refiner<SQ8QuantizerUniform<metric>>>(
+        std::move(inner), factor, args...);
+  } else if (refine_qua == QuantizerType::SQ8) {
+    return std::make_unique<Refiner<SQ8Quantizer<metric>>>(std::move(inner),
+                                                           factor, args...);
+  }
+  return inner;
+}
+
 inline std::unique_ptr<GraphSearcherBase>
 create_searcher(Graph<int32_t> graph, const std::string &metric,
-                const std::string &quantizer = "FP16") {
+                const std::string &quantizer = "FP16",
+                const std::string &refine_quant = "") {
   using RType = std::unique_ptr<GraphSearcherBase>;
   auto m = metric_map[metric];
   auto qua = quantizer_map[quantizer];
+  RType ret = nullptr;
   if (qua == QuantizerType::FP32) {
     if (m == Metric::L2) {
-      return std::make_unique<GraphSearcher<FP32Quantizer<Metric::L2>>>(
+      ret = std::make_unique<GraphSearcher<FP32Quantizer<Metric::L2>>>(
           std::move(graph));
     } else if (m == Metric::IP) {
-      return std::make_unique<GraphSearcher<FP32Quantizer<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<FP32Quantizer<Metric::IP>>>(
           std::move(graph));
     } else {
       printf("Metric not suppported\n");
@@ -278,10 +298,10 @@ create_searcher(Graph<int32_t> graph, const std::string &metric,
     }
   } else if (qua == QuantizerType::FP16) {
     if (m == Metric::L2) {
-      return std::make_unique<GraphSearcher<FP16Quantizer<Metric::L2>>>(
+      ret = std::make_unique<GraphSearcher<FP16Quantizer<Metric::L2>>>(
           std::move(graph));
     } else if (m == Metric::IP) {
-      return std::make_unique<GraphSearcher<FP16Quantizer<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<FP16Quantizer<Metric::IP>>>(
           std::move(graph));
     } else {
       printf("Metric not suppported\n");
@@ -289,10 +309,10 @@ create_searcher(Graph<int32_t> graph, const std::string &metric,
     }
   } else if (qua == QuantizerType::BF16) {
     if (m == Metric::L2) {
-      return std::make_unique<GraphSearcher<BF16Quantizer<Metric::L2>>>(
+      ret = std::make_unique<GraphSearcher<BF16Quantizer<Metric::L2>>>(
           std::move(graph));
     } else if (m == Metric::IP) {
-      return std::make_unique<GraphSearcher<BF16Quantizer<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<BF16Quantizer<Metric::IP>>>(
           std::move(graph));
     } else {
       printf("Metric not suppported\n");
@@ -300,67 +320,43 @@ create_searcher(Graph<int32_t> graph, const std::string &metric,
     }
   } else if (qua == QuantizerType::E5M2) {
     if (m == Metric::L2) {
-      return std::make_unique<Refiner<params::RefineQuantizer<Metric::L2>>>(
-          std::make_unique<GraphSearcher<E5M2Quantizer<Metric::L2>>>(
-              std::move(graph)));
+      ret = std::make_unique<GraphSearcher<E5M2Quantizer<Metric::L2>>>(
+          std::move(graph));
     } else if (m == Metric::IP) {
-      return std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-          std::make_unique<GraphSearcher<E5M2Quantizer<Metric::IP>>>(
-              std::move(graph)));
+      ret = std::make_unique<GraphSearcher<E5M2Quantizer<Metric::IP>>>(
+          std::move(graph));
     } else {
       printf("Metric not suppported\n");
       return nullptr;
     }
   } else if (qua == QuantizerType::SQ8U) {
     if (m == Metric::L2) {
-      RType ret =
-          std::make_unique<GraphSearcher<SQ8QuantizerUniform<Metric::L2>>>(
-              std::move(graph));
-      if (params::SQ8U_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::L2>>>(
-            std::move(ret), params::SQ8U_REFINE_FACTOR);
-      }
-      return ret;
+      ret = std::make_unique<GraphSearcher<SQ8QuantizerUniform<Metric::L2>>>(
+          std::move(graph));
     } else if (m == Metric::IP) {
-      RType ret =
-          std::make_unique<GraphSearcher<SQ8QuantizerUniform<Metric::IP>>>(
-              std::move(graph));
-      if (params::SQ8U_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-            std::move(ret), params::SQ8U_REFINE_FACTOR);
-      }
-      return ret;
+      ret = std::make_unique<GraphSearcher<SQ8QuantizerUniform<Metric::IP>>>(
+          std::move(graph));
     } else {
       printf("Metric not suppported\n");
       return nullptr;
     }
   } else if (qua == QuantizerType::SQ8) {
     if (m == Metric::L2) {
-      RType ret = std::make_unique<GraphSearcher<SQ8Quantizer<Metric::L2>>>(
+      ret = std::make_unique<GraphSearcher<SQ8Quantizer<Metric::L2>>>(
           std::move(graph));
-      if (params::SQ8_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::L2>>>(
-            std::move(ret), params::SQ8_REFINE_FACTOR);
-      }
-      return ret;
     } else if (m == Metric::IP) {
-      RType ret = std::make_unique<GraphSearcher<SQ8Quantizer<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<SQ8Quantizer<Metric::IP>>>(
           std::move(graph));
-      if (params::SQ8_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-            std::move(ret), params::SQ8_REFINE_FACTOR);
-      }
-      return ret;
     } else {
       printf("Metric not suppported\n");
       return nullptr;
     }
   } else if (qua == QuantizerType::SQ6) {
     if (m == Metric::L2) {
-      return std::make_unique<GraphSearcher<SQ6Quantizer<Metric::L2>>>(
+      ret = std::make_unique<GraphSearcher<SQ6Quantizer<Metric::L2>>>(
           std::move(graph));
     } else if (m == Metric::IP) {
-      return std::make_unique<GraphSearcher<SQ6Quantizer<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<SQ6Quantizer<Metric::IP>>>(
           std::move(graph));
     } else {
       printf("Metric not suppported\n");
@@ -368,56 +364,34 @@ create_searcher(Graph<int32_t> graph, const std::string &metric,
     }
   } else if (qua == QuantizerType::SQ4U) {
     if (m == Metric::L2) {
-      RType ret =
-          std::make_unique<GraphSearcher<SQ4QuantizerUniform<Metric::L2>>>(
-              std::move(graph));
-      if (params::SQ4U_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::L2>>>(
-            std::move(ret), params::SQ4U_REFINE_FACTOR);
-      }
-      return ret;
+      ret = std::make_unique<GraphSearcher<SQ4QuantizerUniform<Metric::L2>>>(
+          std::move(graph));
     } else if (m == Metric::IP) {
-      RType ret =
-          std::make_unique<GraphSearcher<SQ4QuantizerUniform<Metric::IP>>>(
-              std::move(graph));
-      if (params::SQ4U_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-            std::move(ret), params::SQ4U_REFINE_FACTOR);
-      }
-      return ret;
+      ret = std::make_unique<GraphSearcher<SQ4QuantizerUniform<Metric::IP>>>(
+          std::move(graph));
     } else {
       printf("Metric not suppported\n");
       return nullptr;
     }
   } else if (qua == QuantizerType::SQ4UA) {
     if (m == Metric::L2) {
-      RType ret =
+      ret =
           std::make_unique<GraphSearcher<SQ4QuantizerUniformAsym<Metric::L2>>>(
               std::move(graph));
-      if (params::SQ4UA_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::L2>>>(
-            std::move(ret), params::SQ4UA_REFINE_FACTOR);
-      }
-      return ret;
     } else if (m == Metric::IP) {
-      RType ret =
+      ret =
           std::make_unique<GraphSearcher<SQ4QuantizerUniformAsym<Metric::IP>>>(
               std::move(graph));
-      if (params::SQ4UA_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-            std::move(ret), params::SQ4UA_REFINE_FACTOR);
-      }
-      return ret;
     } else {
       printf("Metric not suppported\n");
       return nullptr;
     }
   } else if (qua == QuantizerType::SQ4) {
     if (m == Metric::L2) {
-      return std::make_unique<GraphSearcher<SQ4Quantizer<Metric::L2>>>(
+      ret = std::make_unique<GraphSearcher<SQ4Quantizer<Metric::L2>>>(
           std::move(graph));
     } else if (m == Metric::IP) {
-      return std::make_unique<GraphSearcher<SQ4Quantizer<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<SQ4Quantizer<Metric::IP>>>(
           std::move(graph));
     } else {
       printf("Metric not suppported\n");
@@ -425,57 +399,30 @@ create_searcher(Graph<int32_t> graph, const std::string &metric,
     }
   } else if (qua == QuantizerType::SQ2U) {
     if (m == Metric::L2) {
-      RType ret =
-          std::make_unique<GraphSearcher<SQ2QuantizerUniform<Metric::L2>>>(
-              std::move(graph));
-      if (params::SQ2U_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::L2>>>(
-            std::move(ret), params::SQ2U_REFINE_FACTOR);
-      }
-      return ret;
+      ret = std::make_unique<GraphSearcher<SQ2QuantizerUniform<Metric::L2>>>(
+          std::move(graph));
     } else if (m == Metric::IP) {
-      RType ret =
-          std::make_unique<GraphSearcher<SQ2QuantizerUniform<Metric::L2>>>(
-              std::move(graph));
-      if (params::SQ2U_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-            std::move(ret), params::SQ2U_REFINE_FACTOR);
-      }
-      return ret;
+      ret = std::make_unique<GraphSearcher<SQ2QuantizerUniform<Metric::L2>>>(
+          std::move(graph));
     } else {
       printf("Metric not suppported\n");
       return nullptr;
     }
   } else if (qua == QuantizerType::SQ1) {
     if (m == Metric::IP) {
-      RType ret = std::make_unique<GraphSearcher<SQ1Quantizer<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<SQ1Quantizer<Metric::IP>>>(
           std::move(graph));
-      if (params::SQ1_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-            std::move(ret), params::SQ1_REFINE_FACTOR);
-      }
-      return ret;
     } else {
       printf("Metric not suppported\n");
       return nullptr;
     }
   } else if (qua == QuantizerType::PQ8) {
     if (m == Metric::L2) {
-      RType ret = std::make_unique<GraphSearcher<ProductQuant<Metric::L2>>>(
+      ret = std::make_unique<GraphSearcher<ProductQuant<Metric::L2>>>(
           std::move(graph));
-      if (params::PQ8_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::L2>>>(
-            std::move(ret), params::PQ8_REFINE_FACTOR);
-      }
-      return ret;
     } else if (m == Metric::IP) {
-      RType ret = std::make_unique<GraphSearcher<ProductQuant<Metric::IP>>>(
+      ret = std::make_unique<GraphSearcher<ProductQuant<Metric::IP>>>(
           std::move(graph));
-      if (params::PQ8_REFINE) {
-        ret = std::make_unique<Refiner<params::RefineQuantizer<Metric::IP>>>(
-            std::move(ret), params::PQ8_REFINE_FACTOR);
-      }
-      return ret;
     } else {
       printf("Metric not suppported\n");
       return nullptr;
@@ -484,6 +431,15 @@ create_searcher(Graph<int32_t> graph, const std::string &metric,
     printf("Quantizer type not supported\n");
     return nullptr;
   }
+  if (ret && !refine_quant.empty()) {
+    float factor = get_refine_factor(quantizer);
+    if (m == Metric::L2) {
+      ret = make_refiner<Metric::L2>(std::move(ret), refine_quant, factor);
+    } else {
+      ret = make_refiner<Metric::IP>(std::move(ret), refine_quant, factor);
+    }
+  }
+  return ret;
 }
 
 } // namespace glass

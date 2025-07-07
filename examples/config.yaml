@@ -6,15 +6,12 @@ index_params:
     index_args:
       R: 48
       L: 200
-  - index_type: NSG
-    index_args:
-      R: 48
-      L: 64
 
 rebuild: false
-build_quant: SQ4U
+build_quant: SQ8U
 search_quants:
   - SQ4U
+refine_quant: FP16
 topks:
   - 10
 efs:
