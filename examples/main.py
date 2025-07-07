@@ -11,7 +11,16 @@ from ann_dataset import dataset_dict
 
 
 class Glass:
-    def __init__(self, name, build_quant, search_quant, refine_quant, metric, rebuild, method_param):
+    def __init__(
+        self,
+        name,
+        build_quant,
+        search_quant,
+        refine_quant,
+        metric,
+        rebuild,
+        method_param,
+    ):
         self.metric = metric
         self.R = method_param["R"]
         self.L = method_param["L"]
@@ -42,7 +51,9 @@ class Glass:
                 L=self.L,
             )
         g = glass.Graph(os.path.join(self.dir, self.path))
-        self.searcher = glass.Searcher(g, X, self.metric, self.search_quant, self.refine_quant)
+        self.searcher = glass.Searcher(
+            g, X, self.metric, self.search_quant, self.refine_quant
+        )
         self.searcher.optimize()
 
     def set_query_arguments(self, ef):
@@ -70,7 +81,7 @@ class Glass:
         self.result, self.dis = self.searcher.batch_search(self.queries, self.n)
 
     def get_batch_results(self):
-        return self.result.reshape(self.nq, -1)
+        return self.result
 
     def get_avg_dist(self):
         return self.searcher.get_last_search_dist_cmps()

@@ -11,14 +11,14 @@ def get_include_dirs():
         pybind11.get_include(),
         np.get_include(),
     ]
-    
+
     # compatibility when run in python_bindings
     bindings_dir = "python"
     if bindings_dir in os.path.basename(os.getcwd()):
         include_dirs.extend(["../", "../third_party/helpa"])
     else:
         include_dirs.extend(["./", "./third_party/helpa"])
-    
+
     return include_dirs
 
 
@@ -85,7 +85,7 @@ class BuildExt(build_ext):
 def create_extension(version_info):
     libraries = []
     extra_objects = []
-    
+
     ext_modules = [
         Extension(
             "glass",
@@ -96,9 +96,9 @@ def create_extension(version_info):
             extra_objects=extra_objects,
         ),
     ]
-    
+
     return ext_modules
 
 
 def get_build_ext_cmdclass():
-    return {"build_ext": BuildExt} 
+    return {"build_ext": BuildExt}
