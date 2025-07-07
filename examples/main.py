@@ -11,7 +11,7 @@ from ann_dataset import dataset_dict
 
 
 class Glass:
-    def __init__(self, name, build_quant, search_quant, metric, rebuild, method_param):
+    def __init__(self, name, build_quant, search_quant, refine_quant, metric, rebuild, method_param):
         self.metric = metric
         self.R = method_param["R"]
         self.L = method_param["L"]
@@ -21,6 +21,7 @@ class Glass:
         self.dir = "indices"
         self.build_quant = build_quant
         self.search_quant = search_quant
+        self.refine_quant = refine_quant
         self.rebuild = rebuild
         self.path = (
             f"{name}_{self.index_type}_{self.build_quant}_R{self.R}_L{self.L}.glass"
@@ -41,7 +42,7 @@ class Glass:
                 L=self.L,
             )
         g = glass.Graph(os.path.join(self.dir, self.path))
-        self.searcher = glass.Searcher(g, X, self.metric, self.search_quant)
+        self.searcher = glass.Searcher(g, X, self.metric, self.search_quant, self.refine_quant)
         self.searcher.optimize()
 
     def set_query_arguments(self, ef):
@@ -95,6 +96,7 @@ if __name__ == "__main__":
     rebuild = config["rebuild"]
     build_quant = config["build_quant"]
     search_quants = config["search_quants"]
+    refine_quant = config.get("refine_quant", "")
     efs = config["efs"]
     topks = config["topks"]
     runs = config["runs"]
@@ -125,6 +127,7 @@ if __name__ == "__main__":
                             name,
                             build_quant,
                             search_quant,
+                            refine_quant,
                             metric,
                             rebuild,
                             {

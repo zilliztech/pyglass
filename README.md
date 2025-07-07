@@ -35,6 +35,25 @@ source .venv/bin/activate
 uv pip install -v -e "python"
 ```
 
+### Development
+
+For C++ development, you might want to generate a `compile_commands.json` file for your editor's language server. You can use [Bear](https://github.com/rizsotto/Bear) to do this.
+
+**1. Install Bear**
+
+On Debian-based systems (like Ubuntu), you can install Bear with:
+```bash
+apt install bear
+```
+
+**2. Generate `compile_commands.json`**
+
+Run the installation command from within `bear`:
+```bash
+bear -- uv pip install -v -e "python"
+```
+This will create a `compile_commands.json` file in the project's root directory.
+
 ## Quick Tour
 A runnable demo is at [examples/demo.ipynb](https://github.com/zilliztech/pyglass/blob/master/examples/demo.ipynb). It's highly recommended to try it.
 

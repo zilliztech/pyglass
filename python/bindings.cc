@@ -92,10 +92,10 @@ struct Searcher {
   std::unique_ptr<glass::GraphSearcherBase> searcher;
 
   Searcher(Graph &graph, py::object input, const std::string &metric,
-           const std::string &quantizer)
+           const std::string &quantizer, const std::string &refine_quant = "")
       : searcher(
             std::unique_ptr<glass::GraphSearcherBase>(glass::create_searcher(
-                std::move(graph.graph), metric, quantizer))) {
+                std::move(graph.graph), metric, quantizer, refine_quant))) {
     py::array_t<float, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     size_t rows, features;
@@ -257,9 +257,9 @@ PYBIND11_MODULE(glass, m) {
 
   py::class_<Searcher>(m, "Searcher")
       .def(py::init<Graph &, py::object, const std::string &,
-                    const std::string &>(),
+                    const std::string &, const std::string &>(),
            py::arg("graph"), py::arg("data"), py::arg("metric"),
-           py::arg("quantizer"))
+           py::arg("quantizer"), py::arg("refine_quant") = "")
       .def("set_ef", &Searcher::set_ef, py::arg("ef"))
       .def("search", &Searcher::search, py::arg("query"), py::arg("k"))
       .def("batch_search", &Searcher::batch_search, py::arg("query"),
@@ -292,5 +292,4 @@ PYBIND11_MODULE(glass, m) {
   m.def("build_graph", &build_graph, py::arg("index_type"), py::arg("input"),
         py::arg("graph_file"), py::arg("metric"), py::arg("quant"),
         py::arg("R"), py::arg("L"));
-
 }
