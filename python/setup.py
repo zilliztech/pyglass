@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+
 sys.path.append(Path(__file__).parent.as_posix())
 from setuptools import setup
 from build_extension import create_extension, get_build_ext_cmdclass

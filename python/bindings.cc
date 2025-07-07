@@ -117,8 +117,8 @@ struct Searcher {
     py::capsule free_when_done(ids, [](void *f) { delete[] f; });
     py::capsule free_when_done_dis(dis, [](void *f) { delete[] f; });
     return py::make_tuple(
-        py::array_t<int>({k}, {sizeof(int)}, ids, free_when_done),
-        py::array_t<float>({k}, {sizeof(float)}, dis, free_when_done_dis));
+        py::array_t<int32_t>({(size_t)k}, {sizeof(int32_t)}, ids, free_when_done),
+        py::array_t<float>({(size_t)k}, {sizeof(float)}, dis, free_when_done_dis));
   }
 
   py::object batch_search(py::object query, int k, int num_threads = 0) {
@@ -140,8 +140,8 @@ struct Searcher {
     py::capsule free_when_done(ids, [](void *f) { delete[] f; });
     py::capsule free_when_done_dis(dis, [](void *f) { delete[] f; });
     return py::make_tuple(
-        py::array_t<int>({nq * k}, {sizeof(int)}, ids, free_when_done),
-        py::array_t<float>({nq * k}, {sizeof(float)}, dis, free_when_done_dis));
+        py::array_t<int32_t>({(size_t)nq, (size_t)k}, {k * sizeof(int32_t), sizeof(int32_t)}, ids, free_when_done),
+        py::array_t<float>({(size_t)nq, (size_t)k}, {k * sizeof(float), sizeof(float)}, dis, free_when_done_dis));
   }
 
   void set_ef(int ef) { searcher->SetEf(ef); }
