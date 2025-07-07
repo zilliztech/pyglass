@@ -10,9 +10,16 @@ pyglass is a library for fast inference of graph index for approximate similarit
 - Sophisticated memory management and data structure design, very low memory footprint.
 - It's high performant.
 
-## Installation
+## Getting Started
 
-### Installation from Source
+Install pyglass with pip
+
+```bash
+pip install -v -e "python"
+```
+
+### Using uv
+
 It is recommended to use `uv` for setting up the development environment.
 
 1. **Install `uv`**
@@ -23,7 +30,7 @@ pip install uv
 2. **Create and Activate Virtual Environment**
 ```bash
 # Create the virtual environment in a .venv directory
-uv venv --seed --python 3.11
+uv venv
 # Activate the environment (on bash/zsh)
 source .venv/bin/activate
 ```
@@ -144,4 +151,5 @@ You can cite the PyGlass repo as follows:
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=hhy3/pyglass&type=Date)](https://www.star-history.com/#hhy3/pyglass&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=zilliztech/pyglass&type=Date)](https://www.star-history.com/#zilliztech/pyglass&Date)
+

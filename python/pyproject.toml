@@ -16,4 +16,5 @@ dependencies = [
     "scikit-learn",
     "h5py",
     "pyyaml",
+    "requests",
 ]

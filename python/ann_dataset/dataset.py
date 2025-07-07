@@ -2,32 +2,54 @@ import os
 import h5py
 import numpy as np
 from sklearn import preprocessing
+import requests
+from pathlib import Path
 
 HF_ENDPOINT = os.getenv("HF_ENDPOINT", "https://huggingface.co")
 
 
-def hdf5_read(fname, metric):
-    file = h5py.File(fname, "r")
-    base = np.array(file["train"])
-    query = np.array(file["test"])
-    gt = np.array(file["neighbors"])
-    if metric == "IP":
-        base = preprocessing.normalize(base, norm="l2", axis=1)
-        query = preprocessing.normalize(query, norm="l2", axis=1)
-    return base, query, gt
-
-
 class Dataset:
-    def __init__(self):
-        self.name = ""
-        self.metric = "L2"
-        self.d = -1
-        self.nb = -1
-        self.nq = -1
-        self.base = None
-        self.query = None
-        self.gt = None
-        self.file = None
+    def __init__(self, name, metric="L2", normalize=False, url="", data_dir="datasets"):
+        self.name = name
+        self.metric = metric
+        self._normalize = normalize
+        self.file_path = Path(data_dir) / f"{self.name}.hdf5"
+        self._file = None
+        self._download_url = url
+
+        self._load_or_download_file()
+
+    def _load_or_download_file(self):
+        if not self.file_path.exists():
+            self.file_path.parent.mkdir(parents=True, exist_ok=True)
+            self._download_file()
+        self._file = h5py.File(self.file_path, "r")
+
+    def _download_file(self):
+        url = (
+            f"{HF_ENDPOINT}/datasets/{self._download_url}/resolve/main/{self.name}.hdf5"
+        )
+        print(f"Downloading {self.name} from {url} to {self.file_path}...")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        with open(self.file_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print("Download complete.")
+
+    def _preprocess(self, data):
+        if self._normalize:
+            return preprocessing.normalize(data, norm="l2", axis=1)
+        return data
+
+    def get_database(self):
+        return self._preprocess(np.array(self._file["train"]))
+
+    def get_queries(self):
+        return self._preprocess(np.array(self._file["test"]))
+
+    def get_groundtruth(self, k):
+        return np.array(self._file["neighbors"])[:, :k]
 
     def evaluate(self, pred, k=None):
         nq, topk = pred.shape
@@ -39,130 +61,33 @@ class Dataset:
             cnt += np.intersect1d(pred[i], gt[i]).size
         return cnt / nq / k
 
-    def get_database(self):
-        ret = np.array(self.file["train"])
-        if self.metric == "IP":
-            ret = preprocessing.normalize(ret)
-        return ret
 
-    def get_queries(self):
-        ret = np.array(self.file["test"])
-        if self.metric == "IP":
-            ret = preprocessing.normalize(ret)
-        return ret
+hhy3_url = "hhy3/ann-datasets"
+vibe_url = "vector-index-bench/vibe"
 
-    def get_groundtruth(self, k):
-        ret = np.array(self.file["neighbors"])
-        return ret[:, :k]
-
-    def get_fname(self, dir):
-        if dir is None:
-            dir = "datasets"
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-        return f"{dir}/{self.name}.hdf5"
-
-
-def download(name):
-    url = f"{HF_ENDPOINT}/datasets/hhy3/ann-datasets/resolve/main/{name}.hdf5"
-    return url
-
-
-class DatasetSIFT1M(Dataset):
-    name = "sift-128-euclidean"
-    metric = "L2"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
-
-class DatasetFashionMnist(Dataset):
-    name = "fashion-mnist-784-euclidean"
-    metric = "L2"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
-
-class DatasetNYTimes(Dataset):
-    name = "nytimes-256-angular"
-    metric = "IP"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
-
-class DatasetGlove100(Dataset):
-    name = "glove-100-angular"
-    metric = "IP"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
-
-class DatasetGlove25(Dataset):
-    name = "glove-25-angular"
-    metric = "IP"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
-
-class DatasetLastFM64(Dataset):
-    name = "lastfm-64-dot"
-    metric = "IP"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
-
-class DatasetGIST960(Dataset):
-    name = "gist-960-euclidean"
-    metric = "L2"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
-
-class DatasetCohere768(Dataset):
-    name = "cohere-768-angular"
-    metric = "IP"
-
-    def __init__(self, dir=None):
-        path = self.get_fname(dir)
-        if not os.path.exists(path):
-            os.system(f"wget --output-document {path} {download(self.name)}")
-        self.file = h5py.File(path)
-
+dataset_configs = {
+    "sift-128-euclidean": {"metric": "L2", "normalize": False, "url": hhy3_url},
+    "fashion-mnist-784-euclidean": {
+        "metric": "L2",
+        "normalize": False,
+        "url": hhy3_url,
+    },
+    "nytimes-256-angular": {"metric": "IP", "normalize": True, "url": hhy3_url},
+    "glove-100-angular": {"metric": "IP", "normalize": False, "url": hhy3_url},
+    "glove-25-angular": {"metric": "IP", "normalize": True, "url": hhy3_url},
+    "lastfm-64-dot": {"metric": "IP", "normalize": True, "url": hhy3_url},
+    "gist-960-euclidean": {"metric": "L2", "normalize": False, "url": hhy3_url},
+    "cohere-768-angular": {"metric": "IP", "normalize": True, "url": hhy3_url},
+    "llama-128-ip": {"metric": "IP", "normalize": False, "url": vibe_url},
+    "yi-128-ip": {"metric": "IP", "normalize": False, "url": vibe_url},
+    "agnews-mxbai-1024-euclidean": {
+        "metric": "L2",
+        "normalize": False,
+        "url": vibe_url,
+    },
+}
 
 dataset_dict = {
-    "sift-128-euclidean": DatasetSIFT1M,
-    "fashion-mnist-784-euclidean": DatasetFashionMnist,
-    "nytimes-256-angular": DatasetNYTimes,
-    "glove-100-angular": DatasetGlove100,
-    "glove-25-angular": DatasetGlove25,
-    "lastfm-64-dot": DatasetLastFM64,
-    "gist-960-euclidean": DatasetGIST960,
-    "cohere-768-angular": DatasetCohere768,
+    name: lambda n=name, cfg=config: Dataset(n, **cfg)
+    for name, config in dataset_configs.items()
 }
