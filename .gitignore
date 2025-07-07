@@ -1,2 +1,10 @@
 build
 .cache
+**/__pycache__
+**/*.egg-info
+python/tmp
+results
+datasets
+indices
+**/compile_commands.json
+**/*.so
