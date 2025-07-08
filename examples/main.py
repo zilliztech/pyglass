@@ -54,6 +54,7 @@ class Glass:
         self.searcher = glass.Searcher(
             g, X, self.metric, self.search_quant, self.refine_quant
         )
+        self.searcher.enable_stats(True)
         self.searcher.optimize()
 
     def set_query_arguments(self, ef):
@@ -83,8 +84,8 @@ class Glass:
     def get_batch_results(self):
         return self.result
 
-    def get_avg_dist(self):
-        return self.searcher.get_last_search_dist_cmps()
+    def get_stats(self):
+        return self.searcher.get_stats()
 
     def get_memory_usage(self):
         return psutil.Process().memory_info().rss / 1024 / 1024
@@ -158,8 +159,11 @@ if __name__ == "__main__":
                         print(
                             f"dataset: {name}, index: {index_type}, quantizer: {search_quant}, top{topk}"
                         )
+                        print(
+                            f"{'ef':>4} | {'Recall (%)':>12} | {'Max QPS':>12} | {'P99 Latency (ms)':>20} | {'Avg Dist Comps':>18}"
+                        )
+                        print("-" * 75)
                         for ef in efs:
-                            print(f"  ef: {ef}")
                             p.set_query_arguments(ef)
                             mx_qps = 0.0
                             for run in range(runs):
@@ -185,8 +189,9 @@ if __name__ == "__main__":
                                     recall = cnt / nq / topk
                                 qps = nq / T
                                 mx_qps = max(mx_qps, qps)
+                            stats = p.get_stats()
                             print(
-                                f"\trecall: {recall*100.0:.2f}%, max qps: {mx_qps:.2f}, avg dist: {p.get_avg_dist():.2f}"
+                                f"{ef:4d} | {recall*100.0:12.2f} | {mx_qps:12.2f} | {stats['p99_latency_ms']:20.3f} | {stats['avg_dist_comps']:18.2f}"
                             )
                             qpss.append(mx_qps)
                             recalls.append(recall)

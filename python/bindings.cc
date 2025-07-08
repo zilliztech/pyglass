@@ -148,8 +148,14 @@ struct Searcher {
 
   void optimize(int num_threads = 0) { searcher->Optimize(num_threads); }
 
-  double get_last_search_avg_dist_cmps() const {
-    return searcher->GetLastSearchAvgDistCmps();
+  void enable_stats(bool val) { searcher->EnableStats(val); }
+
+  py::dict get_stats() const {
+    auto stats = searcher->GetStats();
+    py::dict d;
+    d["p99_latency_ms"] = stats.p99_latency_ms;
+    d["avg_dist_comps"] = stats.avg_dist_comps;
+    return d;
   }
 };
 
@@ -265,8 +271,8 @@ PYBIND11_MODULE(glass, m) {
       .def("batch_search", &Searcher::batch_search, py::arg("query"),
            py::arg("k"), py::arg("num_threads") = 0)
       .def("optimize", &Searcher::optimize, py::arg("num_threads") = 0)
-      .def("get_last_search_dist_cmps",
-           &Searcher::get_last_search_avg_dist_cmps);
+      .def("enable_stats", &Searcher::enable_stats, py::arg("val"))
+      .def("get_stats", &Searcher::get_stats);
 
   py::class_<Clustering>(m, "Clustering")
       .def(py::init<int32_t, int32_t, const std::string &>(),

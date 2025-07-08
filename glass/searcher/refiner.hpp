@@ -40,7 +40,9 @@ struct Refiner : GraphSearcherBase {
 
     void Optimize(int32_t num_threads = 0) override { inner->Optimize(num_threads); }
 
-    double GetLastSearchAvgDistCmps() const override { return inner->GetLastSearchAvgDistCmps(); }
+    void EnableStats(bool val) override { inner->EnableStats(val); }
+
+    SearchStats GetStats() const override { return inner->GetStats(); }
 
     void Search(const float *q, int32_t k, int32_t *dst, float *scores = nullptr) const override {
         int32_t reorder_k = (int32_t)(k * reorder_mul);

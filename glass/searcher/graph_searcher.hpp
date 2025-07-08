@@ -24,6 +24,8 @@ struct GraphSearcher : public GraphSearcherBase {
 
     // Search parameters
     int32_t ef = 32;
+    bool stats_enabled = false;
+    mutable SearchStats stats;
 
     // Memory prefetch parameters
     int32_t po = 1;
@@ -72,6 +74,10 @@ struct GraphSearcher : public GraphSearcherBase {
     void SetEf(int32_t ef) override { this->ef = ef; }
 
     int32_t GetEf() const override { return ef; }
+
+    void EnableStats(bool val) override { stats_enabled = val; }
+
+    SearchStats GetStats() const override { return stats; }
 
     void Optimize(int32_t num_threads = 0) override {
         if (num_threads == 0) {
@@ -129,21 +135,21 @@ struct GraphSearcher : public GraphSearcherBase {
     }
 
     void Search(const float *q, int32_t k, int32_t *dst, float *scores = nullptr) const override {
-        auto computer = quant.get_computer(q);
-        auto &pool = pools[omp_get_thread_num()];
-        pool.reset(nb, std::max(k, ef), std::max(k, ef));
-        graph.initialize_search(pool, computer);
-        SearchImpl1(pool, computer);
-        pool.to_sorted(dst, scores, k);
+        SearchBatch(q, 1, k, dst, scores);
     }
 
-    mutable double last_search_avg_dist_cmps = 0.0;
-    double GetLastSearchAvgDistCmps() const override { return last_search_avg_dist_cmps; }
-
     void SearchBatch(const float *qs, int32_t nq, int32_t k, int32_t *dst, float *scores = nullptr) const override {
+        std::vector<float> latencies;
+        if (stats_enabled) {
+            latencies.resize(nq);
+        }
         std::atomic<int64_t> total_dist_cmps{0};
 #pragma omp parallel for schedule(dynamic)
         for (int32_t i = 0; i < nq; ++i) {
+            std::chrono::high_resolution_clock::time_point start;
+            if (stats_enabled) {
+                start = std::chrono::high_resolution_clock::now();
+            }
             const float *cur_q = qs + i * d;
             int32_t *cur_dst = dst + i * k;
             float *cur_scores = scores ? scores + i * k : nullptr;
@@ -153,9 +159,17 @@ struct GraphSearcher : public GraphSearcherBase {
             graph.initialize_search(pool, computer);
             SearchImpl2(pool, computer);
             pool.to_sorted(cur_dst, cur_scores, k);
-            total_dist_cmps.fetch_add(computer.dist_cmps());
+            if (stats_enabled) {
+                auto end = std::chrono::high_resolution_clock::now();
+                latencies[i] = std::chrono::duration<float, std::milli>(end - start).count();
+                total_dist_cmps.fetch_add(computer.dist_cmps());
+            }
         }
-        last_search_avg_dist_cmps = (double)total_dist_cmps.load() / nq;
+        if (stats_enabled) {
+            std::sort(latencies.begin(), latencies.end());
+            stats.p99_latency_ms = latencies.empty() ? 0.0f : latencies[static_cast<size_t>(0.99 * nq)];
+            stats.avg_dist_comps = (double)total_dist_cmps.load() / nq;
+        }
     }
 
     void SearchImpl1(NeighborPoolConcept auto &pool, const ComputerConcept auto &computer) const {
