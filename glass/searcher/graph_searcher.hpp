@@ -16,7 +16,7 @@
 namespace glass {
 
 template <QuantConcept Quant>
-struct GraphSearcher : public GraphSearcherBase {
+struct GraphSearcher : public SearcherBase {
     int32_t d;
     int32_t nb;
     Graph<int32_t> graph;
@@ -50,7 +50,8 @@ struct GraphSearcher : public GraphSearcherBase {
     GraphSearcher &operator=(const GraphSearcher &) = delete;
     GraphSearcher &operator=(GraphSearcher &&) = delete;
 
-    void SetData(const float *data, int32_t n, int32_t dim) override {
+    void SetData(const float *data, int32_t n, int32_t dim, int32_t *ivf_map = nullptr,
+                 const float *centroids = nullptr, int32_t ncentroids = 0) override {
         this->nb = n;
         this->d = dim;
         quant = Quant(d);
@@ -135,7 +136,12 @@ struct GraphSearcher : public GraphSearcherBase {
     }
 
     void Search(const float *q, int32_t k, int32_t *dst, float *scores = nullptr) const override {
-        SearchBatch(q, 1, k, dst, scores);
+        auto computer = quant.get_computer(q);
+        auto &pool = pools[omp_get_thread_num()];
+        pool.reset(nb, std::max(k, ef), std::max(k, ef));
+        graph.initialize_search(pool, computer);
+        SearchImpl1(pool, computer);
+        pool.to_sorted(dst, scores, k);
     }
 
     void SearchBatch(const float *qs, int32_t nq, int32_t k, int32_t *dst, float *scores = nullptr) const override {
@@ -238,39 +244,10 @@ struct GraphSearcher : public GraphSearcherBase {
     }
 };
 
-inline float get_refine_factor(const std::string &quantizer) {
-    auto qua = quantizer_map[quantizer];
-    if (qua == QuantizerType::SQ8U) return 1.5f;
-    if (qua == QuantizerType::SQ8) return 1.5f;
-    if (qua == QuantizerType::SQ8P) return 1.5f;
-    if (qua == QuantizerType::SQ4U) return 1.5f;
-    if (qua == QuantizerType::SQ4UA) return 1.5f;
-    if (qua == QuantizerType::SQ2U) return 3.0f;
-    if (qua == QuantizerType::SQ1) return 3.0f;
-    if (qua == QuantizerType::PQ8) return 1.5f;
-    return 1.0f;
-}
-
-template <Metric metric, typename... Args>
-std::unique_ptr<GraphSearcherBase> make_refiner(std::unique_ptr<GraphSearcherBase> inner,
-                                                const std::string &refine_quant, float factor, Args... args) {
-    auto refine_qua = quantizer_map[refine_quant];
-    if (refine_qua == QuantizerType::FP16) {
-        return std::make_unique<Refiner<FP16Quantizer<metric>>>(std::move(inner), factor, args...);
-    } else if (refine_qua == QuantizerType::FP32) {
-        return std::make_unique<Refiner<FP32Quantizer<metric>>>(std::move(inner), factor, args...);
-    } else if (refine_qua == QuantizerType::SQ8U) {
-        return std::make_unique<Refiner<SQ8QuantizerUniform<metric>>>(std::move(inner), factor, args...);
-    } else if (refine_qua == QuantizerType::SQ8) {
-        return std::make_unique<Refiner<SQ8Quantizer<metric>>>(std::move(inner), factor, args...);
-    }
-    return inner;
-}
-
-inline std::unique_ptr<GraphSearcherBase> create_searcher(Graph<int32_t> graph, const std::string &metric,
-                                                          const std::string &quantizer = "FP16",
-                                                          const std::string &refine_quant = "") {
-    using RType = std::unique_ptr<GraphSearcherBase>;
+inline std::unique_ptr<SearcherBase> create_searcher(Graph<int32_t> graph, const std::string &metric,
+                                                     const std::string &quantizer = "FP16",
+                                                     const std::string &refine_quant = "") {
+    using RType = std::unique_ptr<SearcherBase>;
     auto m = metric_map[metric];
     auto qua = quantizer_map[quantizer];
     RType ret = nullptr;

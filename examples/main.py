@@ -6,6 +6,8 @@ import os
 import yaml
 import sys
 
+from sklearn.cluster import KMeans
+
 import glass
 from ann_dataset import dataset_dict
 
@@ -36,7 +38,7 @@ class Glass:
             f"{name}_{self.index_type}_{self.build_quant}_R{self.R}_L{self.L}.glass"
         )
 
-    def fit(self, X):
+    def _fit_graph(self, X):
         self.d = X.shape[1]
         if not os.path.exists(self.dir):
             os.mkdir(self.dir)
@@ -56,6 +58,24 @@ class Glass:
         )
         self.searcher.enable_stats(True)
         self.searcher.optimize()
+
+    def _fit_ivf(self, X):
+        self.d = X.shape[1]
+        print("Fitting KMeans")
+        kmeans = KMeans(n_clusters=self.R, random_state=0, verbose=1).fit(X[:10000])
+        print("KMeans done")
+        centroids = kmeans.cluster_centers_
+        ivf_map = kmeans.predict(X)
+
+        self.searcher = glass.Searcher(
+            X, centroids, ivf_map, self.metric, self.search_quant, self.refine_quant
+        )
+
+    def fit(self, X):
+        if self.index_type == "IVF":
+            self._fit_ivf(X)
+        else:
+            self._fit_graph(X)
 
     def set_query_arguments(self, ef):
         self.searcher.set_ef(ef)

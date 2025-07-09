@@ -6,6 +6,7 @@
 
 #include "glass/neighbor.hpp"
 #include "glass/quant/computer.hpp"
+#include "glass/quant/quant.hpp"
 #include "glass/quant/quant_base.hpp"
 #include "glass/searcher/searcher_base.hpp"
 #include "glass/utils.hpp"
@@ -13,17 +14,18 @@
 namespace glass {
 
 template <QuantConcept QuantType>
-struct Refiner : GraphSearcherBase {
+struct Refiner : SearcherBase {
     int32_t dim;
-    std::unique_ptr<GraphSearcherBase> inner;
+    std::unique_ptr<SearcherBase> inner;
     QuantType quant;
 
     float reorder_mul = 1.0f;
 
-    Refiner(std::unique_ptr<GraphSearcherBase> inner, float reorder_mul = 1.0f)
+    Refiner(std::unique_ptr<SearcherBase> inner, float reorder_mul = 1.0f)
         : inner(std::move(inner)), reorder_mul(reorder_mul) {}
 
-    void SetData(const float *data, int32_t n, int32_t dim) override {
+    void SetData(const float *data, int32_t n, int32_t dim, int32_t *ivf_map = nullptr,
+                 const float *centroids = nullptr, int32_t ncentroids = 0) override {
         this->dim = dim;
         quant = QuantType(dim);
 
@@ -33,7 +35,7 @@ struct Refiner : GraphSearcherBase {
         quant.add(data, n);
         auto t2 = std::chrono::high_resolution_clock::now();
         printf("Done refiner quantizer training, cost %.2lfs\n", std::chrono::duration<double>(t2 - t1).count());
-        inner->SetData(data, n, dim);
+        inner->SetData(data, n, dim, ivf_map, centroids, ncentroids);
     }
 
     void SetEf(int32_t ef) override { inner->SetEf(ef); }
@@ -111,5 +113,34 @@ struct Refiner : GraphSearcherBase {
         }
     }
 };
+
+inline float get_refine_factor(const std::string &quantizer) {
+    auto qua = quantizer_map[quantizer];
+    if (qua == QuantizerType::SQ8U) return 1.5f;
+    if (qua == QuantizerType::SQ8) return 1.5f;
+    if (qua == QuantizerType::SQ8P) return 1.5f;
+    if (qua == QuantizerType::SQ4U) return 1.5f;
+    if (qua == QuantizerType::SQ4UA) return 1.5f;
+    if (qua == QuantizerType::SQ2U) return 3.0f;
+    if (qua == QuantizerType::SQ1) return 3.0f;
+    if (qua == QuantizerType::PQ8) return 1.5f;
+    return 1.0f;
+}
+
+template <Metric metric, typename... Args>
+std::unique_ptr<SearcherBase> make_refiner(std::unique_ptr<SearcherBase> inner, const std::string &refine_quant,
+                                           float factor, Args... args) {
+    auto refine_qua = quantizer_map[refine_quant];
+    if (refine_qua == QuantizerType::FP16) {
+        return std::make_unique<Refiner<FP16Quantizer<metric>>>(std::move(inner), factor, args...);
+    } else if (refine_qua == QuantizerType::FP32) {
+        return std::make_unique<Refiner<FP32Quantizer<metric>>>(std::move(inner), factor, args...);
+    } else if (refine_qua == QuantizerType::SQ8U) {
+        return std::make_unique<Refiner<SQ8QuantizerUniform<metric>>>(std::move(inner), factor, args...);
+    } else if (refine_qua == QuantizerType::SQ8) {
+        return std::make_unique<Refiner<SQ8Quantizer<metric>>>(std::move(inner), factor, args...);
+    }
+    return inner;
+}
 
 }  // namespace glass
