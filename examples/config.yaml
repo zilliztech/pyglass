@@ -6,24 +6,27 @@ index_params:
     index_args:
       R: 48
       L: 200
+      build_quant: SQ8U
+
+  - index_type: IVF
+    index_args:
+      nlist: 1024
 
 rebuild: false
-build_quant: SQ8U
+
 search_quants:
-  - SQ4U
-refine_quant: FP16
+  - search_quant: SQ4U
+    refine_quant: FP16
+
 topks:
-  - 10
-efs:
-  - 20
-  - 30
-  - 40
-  - 50
-  - 60
-  - 70
-  - 80
-  - 90
   - 100
-runs: 5
-batch:
-  - true
+
+efs:
+  - 100
+  - 200
+  - 300
+
+runs: 3
+
+concurrency:
+  min: 1
