@@ -6,9 +6,7 @@
 
 #include "glass/graph.hpp"
 #include "glass/neighbor.hpp"
-#include "glass/quant/product_quant.hpp"
 #include "glass/quant/quant.hpp"
-#include "glass/quant/quant_base.hpp"
 #include "glass/searcher/refiner.hpp"
 #include "glass/searcher/searcher_base.hpp"
 #include "glass/utils.hpp"

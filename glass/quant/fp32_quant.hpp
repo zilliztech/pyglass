@@ -2,6 +2,7 @@
 
 #include "glass/quant/computer.hpp"
 #include "glass/quant/quant_base.hpp"
+#include "helpa/core.hpp"
 
 namespace glass {
 

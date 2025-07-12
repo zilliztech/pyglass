@@ -4,7 +4,7 @@
 #include <cstring>
 
 #include "glass/memory.hpp"
-#include "glass/simd/common.hpp"
+#include "glass/simd/prefetch.hpp"
 #include "glass/types.hpp"
 
 namespace glass {

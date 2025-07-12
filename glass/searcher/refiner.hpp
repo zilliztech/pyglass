@@ -7,9 +7,7 @@
 #include "glass/neighbor.hpp"
 #include "glass/quant/computer.hpp"
 #include "glass/quant/quant.hpp"
-#include "glass/quant/quant_base.hpp"
 #include "glass/searcher/searcher_base.hpp"
-#include "glass/utils.hpp"
 
 namespace glass {
 

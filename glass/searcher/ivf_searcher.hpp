@@ -11,7 +11,6 @@
 
 #include "glass/neighbor.hpp"
 #include "glass/quant/quant.hpp"
-#include "glass/quant/quant_base.hpp"
 #include "glass/searcher/refiner.hpp"
 #include "glass/searcher/searcher_base.hpp"
 

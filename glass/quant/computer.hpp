@@ -8,7 +8,6 @@
 #include <type_traits>
 
 #include "glass/memory.hpp"
-#include "glass/simd/common.hpp"
 #include "glass/storage/tensor.hpp"
 
 namespace glass {
