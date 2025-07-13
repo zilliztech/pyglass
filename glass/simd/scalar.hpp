@@ -107,40 +107,4 @@ inline int32_t L2SqrSQ8SQ4(const uint8_t *x, const uint8_t *y, int d) {
     return sum;
 }
 
-inline int32_t L2SqrSQ2(const uint8_t *x, const uint8_t *y, int d) {
-    int32_t sum = 0;
-    for (int i = 0; i < d; i += 4) {
-        uint8_t xx0 = x[i / 4] & 3;
-        uint8_t xx1 = x[i / 4] >> 2 & 3;
-        uint8_t xx2 = x[i / 4] >> 4 & 3;
-        uint8_t xx3 = x[i / 4] >> 6 & 3;
-        uint8_t yy0 = y[i / 4] & 3;
-        uint8_t yy1 = y[i / 4] >> 2 & 3;
-        uint8_t yy2 = y[i / 4] >> 4 & 3;
-        uint8_t yy3 = y[i / 4] >> 6 & 3;
-        uint8_t d0 = xx0 - yy0;
-        uint8_t d1 = xx1 - yy1;
-        uint8_t d2 = xx2 - yy2;
-        uint8_t d3 = xx3 - yy3;
-        sum += d0 * d0;
-        sum += d1 * d1;
-        sum += d2 * d2;
-        sum += d3 * d3;
-    }
-    return sum;
-}
-
-inline int32_t L2SqrSQ1(const uint8_t *x, const uint8_t *y, int d) {
-    auto xx = (const uint64_t *)x;
-    auto yy = (const uint64_t *)y;
-    const uint64_t *end = xx + d / 64;
-    int32_t sum = 0;
-    while (xx < end) {
-        sum += __builtin_popcountll(*xx ^ *yy);
-        xx += 1;
-        yy += 1;
-    }
-    return sum;
-}
-
 }  // namespace glass

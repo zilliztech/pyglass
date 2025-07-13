@@ -13,6 +13,7 @@
 #include "glass/nsg/nsg.hpp"
 #include "glass/nsg/rnndescent.hpp"
 #include "glass/searcher/graph_searcher.hpp"
+#include "glass/searcher/ivf_searcher.hpp"
 
 namespace py = pybind11;
 using namespace pybind11::literals; // needed to bring in _a literal
@@ -33,6 +34,14 @@ inline void get_input_array_shapes(const py::buffer_info &buffer, size_t *rows,
     *rows = 1;
     *features = buffer.shape[0];
   }
+}
+
+template <typename T>
+inline void get_array_meta(const py::object& array, T*& data, size_t& n, size_t& dim) {
+  py::array_t<T, py::array::c_style | py::array::forcecast> items(array);
+  auto buffer = items.request();
+  get_input_array_shapes(buffer, &n, &dim);
+  data = (T*)items.data(0);
 }
 
 void set_num_threads(int num_threads) { omp_set_num_threads(num_threads); }
@@ -89,19 +98,37 @@ struct Index {
 
 struct Searcher {
 
-  std::unique_ptr<glass::GraphSearcherBase> searcher;
+  std::unique_ptr<glass::SearcherBase> searcher;
 
   Searcher(Graph &graph, py::object input, const std::string &metric,
            const std::string &quantizer, const std::string &refine_quant = "")
       : searcher(
-            std::unique_ptr<glass::GraphSearcherBase>(glass::create_searcher(
+            std::unique_ptr<glass::SearcherBase>(glass::create_searcher(
                 std::move(graph.graph), metric, quantizer, refine_quant))) {
-    py::array_t<float, py::array::c_style | py::array::forcecast> items(input);
-    auto buffer = items.request();
+    float* vector_data;
     size_t rows, features;
-    get_input_array_shapes(buffer, &rows, &features);
-    float *vector_data = (float *)items.data(0);
+    get_array_meta(input, vector_data, rows, features);
     searcher->SetData(vector_data, rows, features);
+  }
+
+  Searcher(py::object input, py::object centroids, py::object ivf_map, const std::string& metric, const std::string& quantizer, const std::string& refine_quant = "")
+      : searcher(
+            std::unique_ptr<glass::SearcherBase>(glass::create_ivf_searcher(
+                metric, quantizer, refine_quant))) {
+
+    size_t rows, features, ncentroids, centroids_dim, n1, n2;
+    float *vector_data, *centroids_data;
+    int32_t *ivf_map_data;
+    get_array_meta(input, vector_data, rows, features);
+    get_array_meta(centroids, centroids_data, ncentroids, centroids_dim);
+    get_array_meta(ivf_map, ivf_map_data, n1, n2);
+    if (centroids_dim != features) {
+      throw std::runtime_error("Centroids dimension mismatch");
+    }
+    if (n1 != 1 || n2 != rows) {
+      throw std::runtime_error("IVF map dimension mismatch");
+    }
+    searcher->SetData(vector_data, rows, features, ivf_map_data, centroids_data, ncentroids);
   }
 
   py::object search(py::object query, int k) {
@@ -122,20 +149,19 @@ struct Searcher {
   }
 
   py::object batch_search(py::object query, int k, int num_threads = 0) {
-    py::array_t<float, py::array::c_style | py::array::forcecast> items(query);
-    auto buffer = items.request();
+    float* vector_data;
+    size_t nq, dim;
+    get_array_meta(query, vector_data, nq, dim);
     int32_t *ids;
     float *dis;
-    size_t nq, dim;
     {
       py::gil_scoped_release l;
-      get_input_array_shapes(buffer, &nq, &dim);
       ids = new int[nq * k];
       dis = new float[nq * k];
       if (num_threads != 0) {
         omp_set_num_threads(num_threads);
       }
-      searcher->SearchBatch(items.data(0), nq, k, ids, dis);
+      searcher->SearchBatch(vector_data, nq, k, ids, dis);
     }
     py::capsule free_when_done(ids, [](void *f) { delete[] f; });
     py::capsule free_when_done_dis(dis, [](void *f) { delete[] f; });
@@ -148,8 +174,14 @@ struct Searcher {
 
   void optimize(int num_threads = 0) { searcher->Optimize(num_threads); }
 
-  double get_last_search_avg_dist_cmps() const {
-    return searcher->GetLastSearchAvgDistCmps();
+  void enable_stats(bool val) { searcher->EnableStats(val); }
+
+  py::dict get_stats() const {
+    auto stats = searcher->GetStats();
+    py::dict d;
+    d["p99_latency_ms"] = stats.p99_latency_ms;
+    d["avg_dist_comps"] = stats.avg_dist_comps;
+    return d;
   }
 };
 
@@ -260,13 +292,17 @@ PYBIND11_MODULE(glass, m) {
                     const std::string &, const std::string &>(),
            py::arg("graph"), py::arg("data"), py::arg("metric"),
            py::arg("quantizer"), py::arg("refine_quant") = "")
+      .def(py::init<py::object, py::object, py::object, const std::string &,
+                    const std::string &, const std::string &>(),
+           py::arg("data"), py::arg("centroids"), py::arg("ivf_map"),
+           py::arg("metric"), py::arg("quantizer"), py::arg("refine_quant") = "")
       .def("set_ef", &Searcher::set_ef, py::arg("ef"))
       .def("search", &Searcher::search, py::arg("query"), py::arg("k"))
       .def("batch_search", &Searcher::batch_search, py::arg("query"),
            py::arg("k"), py::arg("num_threads") = 0)
       .def("optimize", &Searcher::optimize, py::arg("num_threads") = 0)
-      .def("get_last_search_dist_cmps",
-           &Searcher::get_last_search_avg_dist_cmps);
+      .def("enable_stats", &Searcher::enable_stats, py::arg("val"))
+      .def("get_stats", &Searcher::get_stats);
 
   py::class_<Clustering>(m, "Clustering")
       .def(py::init<int32_t, int32_t, const std::string &>(),

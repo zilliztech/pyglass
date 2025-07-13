@@ -1,20 +1,14 @@
 #pragma once
 
-#include <atomic>
 #include <chrono>
-#include <limits>
-#include <random>
-#include <stack>
 
 #include "glass/builder.hpp"
 #include "glass/graph.hpp"
 #include "glass/graph_statistic.hpp"
 #include "glass/neighbor.hpp"
-#include "glass/quant/fp32_quant.hpp"
+#include "glass/nsg/nndescent.hpp"
 #include "glass/quant/quant.hpp"
-#include "glass/quant/sq4u_quant.hpp"
 #include "glass/utils.hpp"
-#include "nndescent.hpp"
 
 namespace glass {
 

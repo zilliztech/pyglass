@@ -6,9 +6,7 @@
 
 #include "glass/graph.hpp"
 #include "glass/neighbor.hpp"
-#include "glass/quant/product_quant.hpp"
 #include "glass/quant/quant.hpp"
-#include "glass/quant/quant_base.hpp"
 #include "glass/searcher/refiner.hpp"
 #include "glass/searcher/searcher_base.hpp"
 #include "glass/utils.hpp"
@@ -16,7 +14,7 @@
 namespace glass {
 
 template <QuantConcept Quant>
-struct GraphSearcher : public GraphSearcherBase {
+struct GraphSearcher : public SearcherBase {
     int32_t d;
     int32_t nb;
     Graph<int32_t> graph;
@@ -24,6 +22,8 @@ struct GraphSearcher : public GraphSearcherBase {
 
     // Search parameters
     int32_t ef = 32;
+    bool stats_enabled = false;
+    mutable SearchStats stats;
 
     // Memory prefetch parameters
     int32_t po = 1;
@@ -48,7 +48,8 @@ struct GraphSearcher : public GraphSearcherBase {
     GraphSearcher &operator=(const GraphSearcher &) = delete;
     GraphSearcher &operator=(GraphSearcher &&) = delete;
 
-    void SetData(const float *data, int32_t n, int32_t dim) override {
+    void SetData(const float *data, int32_t n, int32_t dim, int32_t *ivf_map = nullptr,
+                 const float *centroids = nullptr, int32_t ncentroids = 0) override {
         this->nb = n;
         this->d = dim;
         quant = Quant(d);
@@ -72,6 +73,10 @@ struct GraphSearcher : public GraphSearcherBase {
     void SetEf(int32_t ef) override { this->ef = ef; }
 
     int32_t GetEf() const override { return ef; }
+
+    void EnableStats(bool val) override { stats_enabled = val; }
+
+    SearchStats GetStats() const override { return stats; }
 
     void Optimize(int32_t num_threads = 0) override {
         if (num_threads == 0) {
@@ -137,13 +142,18 @@ struct GraphSearcher : public GraphSearcherBase {
         pool.to_sorted(dst, scores, k);
     }
 
-    mutable double last_search_avg_dist_cmps = 0.0;
-    double GetLastSearchAvgDistCmps() const override { return last_search_avg_dist_cmps; }
-
     void SearchBatch(const float *qs, int32_t nq, int32_t k, int32_t *dst, float *scores = nullptr) const override {
+        std::vector<float> latencies;
+        if (stats_enabled) {
+            latencies.resize(nq);
+        }
         std::atomic<int64_t> total_dist_cmps{0};
 #pragma omp parallel for schedule(dynamic)
         for (int32_t i = 0; i < nq; ++i) {
+            std::chrono::high_resolution_clock::time_point start;
+            if (stats_enabled) {
+                start = std::chrono::high_resolution_clock::now();
+            }
             const float *cur_q = qs + i * d;
             int32_t *cur_dst = dst + i * k;
             float *cur_scores = scores ? scores + i * k : nullptr;
@@ -153,9 +163,17 @@ struct GraphSearcher : public GraphSearcherBase {
             graph.initialize_search(pool, computer);
             SearchImpl2(pool, computer);
             pool.to_sorted(cur_dst, cur_scores, k);
-            total_dist_cmps.fetch_add(computer.dist_cmps());
+            if (stats_enabled) {
+                auto end = std::chrono::high_resolution_clock::now();
+                latencies[i] = std::chrono::duration<float, std::milli>(end - start).count();
+                total_dist_cmps.fetch_add(computer.dist_cmps());
+            }
         }
-        last_search_avg_dist_cmps = (double)total_dist_cmps.load() / nq;
+        if (stats_enabled) {
+            std::sort(latencies.begin(), latencies.end());
+            stats.p99_latency_ms = latencies.empty() ? 0.0f : latencies[static_cast<size_t>(0.99 * nq)];
+            stats.avg_dist_comps = (double)total_dist_cmps.load() / nq;
+        }
     }
 
     void SearchImpl1(NeighborPoolConcept auto &pool, const ComputerConcept auto &computer) const {
@@ -224,39 +242,10 @@ struct GraphSearcher : public GraphSearcherBase {
     }
 };
 
-inline float get_refine_factor(const std::string &quantizer) {
-    auto qua = quantizer_map[quantizer];
-    if (qua == QuantizerType::SQ8U) return 1.5f;
-    if (qua == QuantizerType::SQ8) return 1.5f;
-    if (qua == QuantizerType::SQ8P) return 1.5f;
-    if (qua == QuantizerType::SQ4U) return 1.5f;
-    if (qua == QuantizerType::SQ4UA) return 1.5f;
-    if (qua == QuantizerType::SQ2U) return 3.0f;
-    if (qua == QuantizerType::SQ1) return 3.0f;
-    if (qua == QuantizerType::PQ8) return 1.5f;
-    return 1.0f;
-}
-
-template <Metric metric, typename... Args>
-std::unique_ptr<GraphSearcherBase> make_refiner(std::unique_ptr<GraphSearcherBase> inner,
-                                                const std::string &refine_quant, float factor, Args... args) {
-    auto refine_qua = quantizer_map[refine_quant];
-    if (refine_qua == QuantizerType::FP16) {
-        return std::make_unique<Refiner<FP16Quantizer<metric>>>(std::move(inner), factor, args...);
-    } else if (refine_qua == QuantizerType::FP32) {
-        return std::make_unique<Refiner<FP32Quantizer<metric>>>(std::move(inner), factor, args...);
-    } else if (refine_qua == QuantizerType::SQ8U) {
-        return std::make_unique<Refiner<SQ8QuantizerUniform<metric>>>(std::move(inner), factor, args...);
-    } else if (refine_qua == QuantizerType::SQ8) {
-        return std::make_unique<Refiner<SQ8Quantizer<metric>>>(std::move(inner), factor, args...);
-    }
-    return inner;
-}
-
-inline std::unique_ptr<GraphSearcherBase> create_searcher(Graph<int32_t> graph, const std::string &metric,
-                                                          const std::string &quantizer = "FP16",
-                                                          const std::string &refine_quant = "") {
-    using RType = std::unique_ptr<GraphSearcherBase>;
+inline std::unique_ptr<SearcherBase> create_searcher(Graph<int32_t> graph, const std::string &metric,
+                                                     const std::string &quantizer = "FP16",
+                                                     const std::string &refine_quant = "") {
+    using RType = std::unique_ptr<SearcherBase>;
     auto m = metric_map[metric];
     auto qua = quantizer_map[quantizer];
     RType ret = nullptr;

@@ -1,10 +1,11 @@
 #pragma once
 
 #include "glass/common.hpp"
-#include "glass/quant/bf16_quant.hpp"
 #include "glass/quant/computer.hpp"
 #include "glass/quant/quant_base.hpp"
+#include "glass/simd/common.hpp"
 #include "glass/types.hpp"
+#include "helpa/core.hpp"
 
 namespace glass {
 
