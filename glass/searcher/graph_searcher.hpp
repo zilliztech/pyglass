@@ -9,7 +9,7 @@
 #include "glass/neighbor.hpp"
 #include "glass/quant/quant.hpp"
 #include "glass/searcher/refiner.hpp"
-#include "glass/searcher/search_impl..hpp"
+#include "glass/searcher/search_impl.hpp"
 #include "glass/searcher/searcher_base.hpp"
 #include "glass/utils.hpp"
 
