@@ -6,14 +6,11 @@
 #include <chrono>
 #include <cstdint>
 #include <mutex>
-#include <string>
 #include <vector>
 
 #include "glass/graph.hpp"
 #include "glass/neighbor.hpp"
 #include "glass/nsg/nhood.hpp"
-#include "glass/simd/common.hpp"
-#include "glass/utils.hpp"
 
 namespace glass {
 
@@ -29,7 +26,6 @@ struct NNDescent {
     int iters = 10;
     int random_seed = 347;
     int L;
-    DistFunc<float, float, float> dist_func;
 
     NNDescent(int32_t nb, const ComputerType &computer) : nb(nb), computer(computer) {}
 

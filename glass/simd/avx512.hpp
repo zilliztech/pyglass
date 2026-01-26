@@ -173,56 +173,6 @@ inline int32_t L2SqrSQ8SQ4(const uint8_t *x, const uint8_t *y, int d) {
 #endif
 }
 
-inline int32_t L2SqrSQ2(const uint8_t *x, const uint8_t *y, int d) {
-    const uint8_t *end = x + d / 4;
-    __m256i sum = _mm256_setzero_si256();
-    __m256i mask = _mm256_set1_epi8(0x3);
-    while (x < end) {
-        auto xx = _mm256_loadu_si256((__m256i *)x);
-        x += 32;
-        auto yy = _mm256_loadu_si256((__m256i *)y);
-        y += 32;
-        auto xx1 = _mm256_and_si256(xx, mask);
-        auto xx2 = _mm256_and_si256(_mm256_srli_epi16(xx, 2), mask);
-        auto xx3 = _mm256_and_si256(_mm256_srli_epi16(xx, 4), mask);
-        auto xx4 = _mm256_and_si256(_mm256_srli_epi16(xx, 6), mask);
-        auto yy1 = _mm256_and_si256(yy, mask);
-        auto yy2 = _mm256_and_si256(_mm256_srli_epi16(yy, 2), mask);
-        auto yy3 = _mm256_and_si256(_mm256_srli_epi16(yy, 4), mask);
-        auto yy4 = _mm256_and_si256(_mm256_srli_epi16(yy, 6), mask);
-        auto d1 = _mm256_sub_epi8(xx1, yy1);
-        auto d2 = _mm256_sub_epi8(xx2, yy2);
-        auto d3 = _mm256_sub_epi8(xx3, yy3);
-        auto d4 = _mm256_sub_epi8(xx4, yy4);
-        d1 = _mm256_abs_epi8(d1);
-        d2 = _mm256_abs_epi8(d2);
-        d3 = _mm256_abs_epi8(d3);
-        d4 = _mm256_abs_epi8(d4);
-        auto m1 = _mm256_maddubs_epi16(d1, d1);
-        auto m2 = _mm256_maddubs_epi16(d2, d2);
-        auto m3 = _mm256_maddubs_epi16(d3, d3);
-        auto m4 = _mm256_maddubs_epi16(d4, d4);
-        m1 = _mm256_add_epi16(m1, m2);
-        m1 = _mm256_add_epi16(m1, m3);
-        m1 = _mm256_add_epi16(m1, m4);
-        sum = _mm256_add_epi16(sum, m1);
-    }
-    return reduce_add_i16x16(sum);
-}
-
-inline int32_t L2SqrSQ1(const uint8_t *x, const uint8_t *y, int d) {
-    auto xx = (const uint64_t *)x;
-    auto yy = (const uint64_t *)y;
-    const uint64_t *end = xx + d / 64;
-    int32_t sum = 0;
-    while (xx < end) {
-        sum += __builtin_popcountll(*xx ^ *yy);
-        xx += 1;
-        yy += 1;
-    }
-    return sum;
-}
-
 }  // namespace glass
 
 #endif

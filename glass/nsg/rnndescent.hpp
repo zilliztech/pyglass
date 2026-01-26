@@ -5,14 +5,12 @@
 #include <chrono>
 #include <cstdio>
 #include <mutex>
-#include <ostream>
 #include <random>
 #include <vector>
 
 #include "glass/builder.hpp"
 #include "glass/graph.hpp"
 #include "glass/neighbor.hpp"
-#include "glass/nsg/nhood.hpp"
 #include "glass/quant/quant.hpp"
 #include "glass/utils.hpp"
 

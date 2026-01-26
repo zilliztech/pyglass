@@ -144,7 +144,7 @@ struct Graph {
         reader.read((char *)&N, 4);
         reader.read((char *)&K, 4);
         data = (node_t *)align_alloc((int64_t)N * K * 4, true, -1);
-        reader.read((char *)data, N * K * 4);
+        reader.read((char *)data, (int64_t)N * K * 4);
         if (reader.peek() != EOF) {
             initializer = std::make_unique<HNSWInitializer>(N);
             initializer->load(reader);

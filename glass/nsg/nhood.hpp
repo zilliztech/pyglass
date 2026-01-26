@@ -2,11 +2,9 @@
 
 #include <functional>
 #include <mutex>
-#include <random>
 #include <vector>
 
 #include "glass/neighbor.hpp"
-#include "glass/utils.hpp"
 
 namespace glass {
 

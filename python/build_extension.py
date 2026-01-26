@@ -49,9 +49,7 @@ def cpp_flag(compiler):
     if has_flag(compiler, "-std=c++20"):
         return "-std=c++20"
     else:
-        raise RuntimeError(
-            "Unsupported compiler -- at least C++20 support " "is needed!"
-        )
+        raise RuntimeError("Unsupported compiler -- at least C++20 support is needed!")
 
 
 class BuildExt(build_ext):

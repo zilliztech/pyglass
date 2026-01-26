@@ -1,7 +1,5 @@
 #pragma once
 
-#include "glass/common.hpp"
-#include "glass/simd/prefetch.hpp"
 #include "helpa/core.hpp"
 
 #if defined(__AVX512F__)
@@ -34,9 +32,5 @@ inline float IPSQ6_ext(const float *x, const uint8_t *y, int d, const float *mi,
 inline float L2SqrSQ4_ext(const float *x, const uint8_t *y, int d, const float *mi, const float *dif);
 inline float IPSQ4_ext(const float *x, const uint8_t *y, int d, const float *mi, const float *dif);
 inline int32_t L2SqrSQ8SQ4(const uint8_t *x, const uint8_t *y, int d);
-// sq2
-inline int32_t L2SqrSQ2(const uint8_t *x, const uint8_t *y, int d);
-// sq1
-inline int32_t L2SqrSQ1(const uint8_t *x, const uint8_t *y, int d);
 
 }  // namespace glass

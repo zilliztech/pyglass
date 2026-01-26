@@ -3,7 +3,6 @@
 #include "glass/memory.hpp"
 #include "glass/neighbor.hpp"
 #include "glass/quant/computer.hpp"
-#include <atomic>
 #include <cstring>
 #include <mutex>
 #include <queue>

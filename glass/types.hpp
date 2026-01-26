@@ -1,15 +1,9 @@
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <type_traits>
 
 #include "helpa/types.hpp"
-#if defined(__SSE2__)
-#include <immintrin.h>
-#endif
-
 namespace glass {
 
 using bf16 = helpa::bf16;

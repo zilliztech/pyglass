@@ -1,12 +1,9 @@
 #pragma once
 
-#include <cmath>
-#include <vector>
-
 #include "glass/quant/calibrator.hpp"
 #include "glass/quant/computer.hpp"
 #include "glass/quant/quant_base.hpp"
-#include "glass/quant/utils.hpp"
+#include "glass/simd/common.hpp"
 
 namespace glass {
 

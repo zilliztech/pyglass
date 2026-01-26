@@ -38,7 +38,9 @@ struct Bitset {
     Bitset() = default;
 
     explicit Bitset(int n)
-        : nb(n), nbytes((n + block_size - 1) / block_size * sizeof(Block)), data((Block *)align_alloc(nbytes)) {}
+        : nb(n), nbytes((n + block_size - 1) / block_size * sizeof(Block)), data((Block *)malloc(nbytes)) {
+        memset(data, 0, nbytes);
+    }
 
     friend void swap(Bitset &lhs, Bitset &rhs) {
         using std::swap;
@@ -78,7 +80,7 @@ struct Bitset {
     bool get(int i) const { return (data[i / block_size] >> (i & (block_size - 1))) & 1; }
 };
 
-template <typename Block = uint32_t>
+template <typename Block = uint64_t>
 struct TwoLevelBitset {
     constexpr static int block_size = sizeof(Block) * 8;
     int32_t nb = 0;
@@ -91,8 +93,10 @@ struct TwoLevelBitset {
     explicit TwoLevelBitset(int n)
         : nb(n),
           nbytes((n + block_size - 1) / block_size * sizeof(Block)),
-          data((Block *)align_alloc(nbytes)),
-          visited((n + block_size - 1) / block_size) {}
+          data((Block *)malloc(nbytes)),
+          visited((n + block_size - 1) / block_size) {
+        memset(data, 0, nbytes);
+    }
 
     friend void swap(TwoLevelBitset &lhs, TwoLevelBitset &rhs) {
         using std::swap;
