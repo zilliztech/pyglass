@@ -106,7 +106,9 @@ class BuildExt(build_ext):
 
         march = os.environ.get("GLASS_MARCH")
         if march:
-            opts.append(march)
+            # Split so a multi-flag value (e.g. "-mavx2 -mfma -mf16c") reaches the
+            # compiler as separate tokens rather than one unrecognized argument.
+            opts.extend(march.split())
         elif mach in ("x86_64", "amd64"):
             opts.append("-march=native")
         # arm64/aarch64: NEON is implicit (no -march needed).
