@@ -21,9 +21,11 @@ inline void *align_alloc_memory(size_t nbytes, bool set = true, uint8_t x = 0) {
         printf("Allocating %.2fG memory for %.2fG data\n", double(len) / size_1G, double(nbytes) / size_1G);
     }
     auto p = std::aligned_alloc(alignment, len);
+#ifdef MADV_HUGEPAGE  // Linux-only transparent-hugepage hint; absent on macOS/BSD
     if constexpr (alignment >= size_2M) {
         madvise(p, len, MADV_HUGEPAGE);
     }
+#endif
     if (set) {
         std::memset(p, x, len);
     }

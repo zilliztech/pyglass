@@ -324,6 +324,21 @@ l2a_u4_u4(const uint8_t* x, const uint8_t* y, const int32_t d) {
 #endif
 }
 
+// Portability fix: upstream defines l2a_u2_u2 only for x86. Provide a scalar
+// 2-bit-packed L2 (4 values/byte) so the symbol exists on arm too. Exact and
+// arch-neutral; the FP32 path never calls it, so speed here is irrelevant.
+inline int32_t
+l2a_u2_u2(const uint8_t* x, const uint8_t* y, const int32_t d) {
+    int32_t ans = 0;
+    for (int32_t i = 0; i < d; ++i) {
+        int32_t xx = (x[i / 4] >> ((i & 3) * 2)) & 0x3;
+        int32_t yy = (y[i / 4] >> ((i & 3) * 2)) & 0x3;
+        auto t = xx - yy;
+        ans += t * t;
+    }
+    return ans;
+}
+
 }  // namespace helpa
 
 #endif

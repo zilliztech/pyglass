@@ -1,6 +1,8 @@
 #pragma once
 
+#if defined(__SSE2__)
 #include <immintrin.h>
+#endif
 
 #include <bit>
 #include <cmath>

@@ -57,7 +57,7 @@ struct Refiner : GraphSearcherBase {
                 computer.prefetch(ret[i + 1], 1);
             }
             int id = ret[i];
-            float dist = computer(id);
+            auto dist = computer(id);  // computer's native dist_type (avoids float->int narrowing)
             heap.push({id, dist});
         }
         for (int i = heap.size() - 1; i >= 0; --i) {
@@ -97,7 +97,7 @@ struct Refiner : GraphSearcherBase {
                 computer.prefetch(from[j + 1], 1);
             }
             int id = from[j];
-            float dist = computer(id);
+            auto dist = computer(id);  // computer's native dist_type (avoids float->int narrowing)
             heap.push({id, dist});
         }
         for (int j = heap.size() - 1; j >= 0; --j) {

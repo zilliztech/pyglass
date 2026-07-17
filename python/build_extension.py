@@ -54,30 +54,73 @@ def cpp_flag(compiler):
         )
 
 
+def _omp_flags(compiler, system):
+    """Return (compile_flags, link_flags) for OpenMP, portably.
+
+    Linux gcc/clang ship libgomp/libomp (-fopenmp just works). Apple clang needs
+    Homebrew's libomp; if it isn't present we build single-threaded (the
+    ``#pragma omp`` directives are simply ignored) rather than failing the build.
+    """
+    if system == "Darwin":
+        for prefix in ("/opt/homebrew/opt/libomp", "/usr/local/opt/libomp"):
+            if os.path.isdir(prefix):
+                return (
+                    ["-Xpreprocessor", "-fopenmp", f"-I{prefix}/include"],
+                    [f"-L{prefix}/lib", "-lomp"],
+                )
+        print("glass build: libomp not found — building single-threaded "
+              "(`brew install libomp` for parallelism)")
+        return ([], [])
+    if has_flag(compiler, "-fopenmp"):
+        return (["-fopenmp"], ["-fopenmp"])
+    return ([], [])
+
+
 class BuildExt(build_ext):
-    """A custom build extension for adding compiler-specific options."""
+    """Handle compiler flags per platform.
 
-    c_opts = {
-        "unix": "-Ofast -lrt -march=native -fpic -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0".split()
-    }
+    The previous build hardcoded ``-march=native -lrt -fopenmp``, which only works
+    on x86 Linux: ``-lrt`` isn't a macOS library, Apple clang needs libomp rather
+    than plain ``-fopenmp``, and ``-march=native`` isn't valid for Apple-clang
+    arm64. This keeps the existing x86 behaviour (``-march=native`` by default) and
+    makes the build work on macOS (Apple Silicon and Intel) and on aarch64:
 
-    link_opts = {
-        "unix": [],
-    }
-
-    c_opts["unix"].append("-fopenmp")
-    link_opts["unix"].extend(["-fopenmp", "-pthread"])
+    * x86_64 → ``-march=native`` (unchanged). Override with ``GLASS_MARCH`` (e.g. a
+      fixed ``-mavx2`` baseline when building portable/redistributable wheels).
+    * aarch64/arm64 → no ``-march`` flag; NEON is implicit (``__aarch64__``), and
+      Apple clang rejects ``-march=native`` here.
+    * ``-lrt`` only on Linux; OpenMP via libomp on macOS when present.
+    """
 
     def build_extensions(self):
-        opts = self.c_opts.get("unix", [])
+        import platform
+
+        system = platform.system()
+        mach = platform.machine().lower()
+
+        opts = ["-Ofast", "-fPIC", "-ftree-vectorize"]
         opts.append(f'-DVERSION_INFO="{self.distribution.get_version()}"')
         opts.append(cpp_flag(self.compiler))
         if has_flag(self.compiler, "-fvisibility=hidden"):
             opts.append("-fvisibility=hidden")
 
+        march = os.environ.get("GLASS_MARCH")
+        if march:
+            opts.append(march)
+        elif mach in ("x86_64", "amd64"):
+            opts.append("-march=native")
+        # arm64/aarch64: NEON is implicit (no -march needed).
+
+        link = ["-pthread"]
+        if system == "Linux":
+            link.append("-lrt")
+        omp_c, omp_l = _omp_flags(self.compiler, system)
+        opts += omp_c
+        link += omp_l
+
         for ext in self.extensions:
             ext.extra_compile_args.extend(opts)
-            ext.extra_link_args.extend(self.link_opts.get("unix", []))
+            ext.extra_link_args.extend(link)
 
         build_ext.build_extensions(self)
 

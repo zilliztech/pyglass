@@ -1,8 +1,8 @@
 #pragma once
 
-#include "helpa/platform/x86/utils.hpp"
 #if defined(__AVX2__)
 
+#include "helpa/platform/x86/utils.hpp"
 #include <immintrin.h>
 
 #include "glass/simd/avx2_utils.hpp"
